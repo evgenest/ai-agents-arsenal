@@ -68,6 +68,11 @@ bun run index.ts
 |---|---|---|
 | Claude Code (global) | `~/.claude/settings.json` | Claude Code CLI + VS Code extension |
 | VS Code / GitHub Copilot (global) | `%APPDATA%/Code/User/mcp.json` | All VS Code projects on this machine |
+| Cursor (global) | `%USERPROFILE%\.cursor\mcp.json` | Cursor across all projects |
+| Windsurf (global) | `%USERPROFILE%\.codeium\windsurf\mcp_config.json` | Windsurf across all projects |
+| Codex (global) | `~/.codex/config.toml` | Codex CLI + IDE extension |
+| Gemini CLI (global) | `%USERPROFILE%\.gemini\settings.json` | Gemini CLI across all projects |
+| Kilo (global) | `~/.config/kilo/kilo.jsonc` | Kilo across all projects |
 
 ## Configuration
 
@@ -76,8 +81,8 @@ bun run index.ts
 Open [`config/agents.config.ts`](config/agents.config.ts) and toggle `enabled`:
 
 ```ts
-{ id: "cursor",   enabled: true,  mcpTargets: [] },  // turn on
-{ id: "windsurf", enabled: false, mcpTargets: [] },  // turn off
+{ id: "cursor",   enabled: true,  mcpTargets: ["cursor"] },    // turn on
+{ id: "windsurf", enabled: false, mcpTargets: ["windsurf"] },  // turn off
 ```
 
 Skills and MCP setup targets are driven by agents with `enabled: true`.
@@ -85,7 +90,14 @@ Skills and MCP setup targets are driven by agents with `enabled: true`.
 Current MCP target mapping:
 - `claude-code` writes to `~/.claude/settings.json`
 - `github-copilot` writes to `%APPDATA%/Code/User/mcp.json`
-- `antigravity` writes to `%APPDATA%/Code/User/mcp.json`
+- `antigravity` is still provisional: it is temporarily mapped to the VS Code global MCP config until its own global config path is confirmed
+- `cursor` writes to `%USERPROFILE%\.cursor\mcp.json`
+- `windsurf` writes to `%USERPROFILE%\.codeium\windsurf\mcp_config.json`
+- `codex` writes to `~/.codex/config.toml`
+- `gemini-cli` writes to `%USERPROFILE%\.gemini\settings.json`
+- `kilo` writes to `~/.config/kilo/kilo.jsonc`
+
+Antigravity note: the repository still uses the VS Code MCP format for `antigravity`, but its dedicated global configuration flow has not been verified yet.
 
 ### Add a skill
 

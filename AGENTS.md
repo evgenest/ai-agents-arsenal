@@ -26,12 +26,19 @@ index.ts          →  setup/skills.ts   →  config/agents.config.ts
 - `setupMcp()` — resolves active MCP targets from `config/agents.config.ts` and runs only the relevant MCP writers.
 - `setupClaudeCodeMcp()` — merges `mcpServers` into `~/.claude/settings.json`. Creates the file if absent. Safe to run repeatedly (merges, does not overwrite).
 - `setupVscodeMcp()` — merges `mcpServers` (converted to VSCode format) into `%APPDATA%/Code/User/mcp.json` (Windows) or the platform equivalent — the **global** VS Code user config, not a per-workspace file. Preserves existing servers and `inputs` entries.
+- `setupCursorMcp()` — merges `mcpServers` into `~/.cursor/mcp.json`.
+- `setupWindsurfMcp()` — merges `mcpServers` into `~/.codeium/windsurf/mcp_config.json`.
+- `setupCodexMcp()` — writes managed `[mcp_servers.*]` entries into `~/.codex/config.toml`.
+- `setupGeminiCliMcp()` — merges `mcpServers` into `~/.gemini/settings.json`.
+- `setupKiloMcp()` — merges `mcp` entries into `~/.config/kilo/kilo.jsonc`.
 
-The key transformation in `setup/mcp.ts`: env var references use `${VAR}` syntax (Claude Code format). When writing the VSCode config, all string values are converted by replacing `${VAR}` → `${env:VAR}`. This is handled by `toVscodeFormat()` and applied recursively across `env`, `headers`, and `args` fields.
+The key transformation in `setup/mcp.ts`: env var references use `${VAR}` syntax in `config/mcp.config.ts`, and each target writer converts them to the format that agent expects. Examples: VS Code and Windsurf use `${env:VAR}`, Gemini CLI uses `$VAR` in `env`, Codex uses `env_vars` / `env_http_headers`, and Kilo uses `{env:VAR}`.
 
 ### Config Layer (`config/`)
 
 **`config/agents.config.ts`** — list of all supported agents with `enabled` boolean flags plus `mcpTargets`. Exports `agentsConfig` (full list), `activeAgents` (filtered to enabled only, as string IDs), and `activeMcpTargets` (deduplicated MCP config targets derived from enabled agents). Edit `enabled` here to include or exclude agents from all operations.
+
+Antigravity currently remains a provisional mapping to the VS Code MCP target. Its own dedicated global config path/flow is not yet verified in this repository.
 
 Supported agent IDs: `claude-code`, `github-copilot`, `antigravity`, `cursor`, `windsurf`, `codex`, `gemini-cli`, `kilo`.
 
@@ -65,6 +72,11 @@ All env var values use `${VAR_NAME}` syntax. These are kept as literal strings i
 |---|---|---|
 | `~/.claude/settings.json` | `setupClaudeCodeMcp()` | `mcpServers` key merged in |
 | `%APPDATA%/Code/User/mcp.json` | `setupVscodeMcp()` | `servers` key, VSCode format, global |
+| `~/.cursor/mcp.json` | `setupCursorMcp()` | `mcpServers` key merged in |
+| `~/.codeium/windsurf/mcp_config.json` | `setupWindsurfMcp()` | `mcpServers` key merged in |
+| `~/.codex/config.toml` | `setupCodexMcp()` | managed `[mcp_servers.*]` sections |
+| `~/.gemini/settings.json` | `setupGeminiCliMcp()` | `mcpServers` key merged in |
+| `~/.config/kilo/kilo.jsonc` | `setupKiloMcp()` | `mcp` key merged in |
 
 Skills are installed globally via the `bunx skills` CLI — they write to tool-specific global locations handled by that CLI.
 
@@ -74,7 +86,7 @@ Skills are installed globally via the `bunx skills` CLI — they write to tool-s
 
 In `config/agents.config.ts`, add to `agentsConfig`:
 ```ts
-{ id: "new-agent-id", enabled: true, mcpTargets: [] },
+{ id: "new-agent-id", enabled: true, mcpTargets: ["cursor"] },
 ```
 The `as const` on the array means the `id` values are typed as string literals. Adding a new entry is safe.
 
