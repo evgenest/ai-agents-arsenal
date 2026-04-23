@@ -1,7 +1,15 @@
-import { mkdirSync } from "fs";
+import { mkdirSync, copyFileSync, existsSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import { mcpServers, type McpServer } from "../config/mcp.config";
+
+async function backupIfExists(filePath: string): Promise<string | null> {
+  if (!existsSync(filePath)) return null;
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const backupPath = `${filePath}.backup-${timestamp}`;
+  copyFileSync(filePath, backupPath);
+  return backupPath;
+}
 
 // Converts ${VAR} → ${env:VAR} for VSCode's mcp.json format
 function toVscodeFormat(s: string): string {
@@ -27,11 +35,14 @@ export async function setupClaudeCodeMcp() {
   const claudeDir = join(homedir(), ".claude");
   mkdirSync(claudeDir, { recursive: true });
 
-  const settingsFile = Bun.file(join(claudeDir, "settings.json"));
+  const settingsPath = join(claudeDir, "settings.json");
+  const settingsFile = Bun.file(settingsPath);
+  const backup = await backupIfExists(settingsPath);
+  if (backup) console.log(`Existing settings backed up to ${backup}`);
   const settings = (await settingsFile.exists()) ? await settingsFile.json() : {};
   settings.mcpServers = { ...(settings.mcpServers ?? {}), ...mcpServers };
   await Bun.write(settingsFile, JSON.stringify(settings, null, 2));
-  console.log(`MCP servers written to ${join(claudeDir, "settings.json")}`);
+  console.log(`MCP servers written to ${settingsPath}`);
 }
 
 // Writes to %APPDATA%\Code\User\mcp.json — global for all VS Code projects (Windows/macOS/Linux)
@@ -46,7 +57,10 @@ export async function setupVscodeMcp() {
   const userDir = join(appData, "Code", "User");
   mkdirSync(userDir, { recursive: true });
 
-  const mcpJsonFile = Bun.file(join(userDir, "mcp.json"));
+  const mcpJsonPath = join(userDir, "mcp.json");
+  const mcpJsonFile = Bun.file(mcpJsonPath);
+  const backup = await backupIfExists(mcpJsonPath);
+  if (backup) console.log(`Existing mcp.json backed up to ${backup}`);
   const existing = (await mcpJsonFile.exists()) ? await mcpJsonFile.json() : {};
   const config = {
     ...existing,
@@ -58,5 +72,5 @@ export async function setupVscodeMcp() {
     },
   };
   await Bun.write(mcpJsonFile, JSON.stringify(config, null, 2));
-  console.log(`MCP servers written to ${join(userDir, "mcp.json")}`);
+  console.log(`MCP servers written to ${mcpJsonPath}`);
 }
