@@ -4,6 +4,22 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v4.1.0 - Selective setup execution and Exa auth fix
+
+Release date: 2026-04-23
+
+Tag: `v4.1.0`
+
+Changes since `v4.0.0`:
+- adds CLI phase selection so `bun run index.ts --skills` and `bun run index.ts --mcp` can run setup independently while the default command still runs both phases
+- makes plain JSON config reads tolerate empty files, which avoids setup failures on blank existing configs such as Antigravity's `mcp_config.json`
+- switches the Exa remote MCP server definition from `x-api-key` to the documented `Authorization: Bearer ...` header format
+- updates repository documentation so the new setup flow and Exa auth format are described consistently
+
+Net effect:
+- repeated setup runs no longer have to reinstall skills when only MCP output needs to be refreshed
+- the generated Exa MCP configuration now matches Exa's documented remote auth contract
+
 ## v4.0.0 - Dedicated Antigravity target
 
 Release date: 2026-04-23

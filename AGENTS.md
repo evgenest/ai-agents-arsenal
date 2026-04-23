@@ -5,14 +5,14 @@ Setup repository for globally installing AI agent skills and MCP servers across 
 ## Architecture
 
 ```
-index.ts          →  setup/skills.ts   →  config/agents.config.ts
-                                        →  config/skills.config.ts
-               →  setup/mcp.ts        →  setup/mcp/targets/*.ts
-                                       →  setup/mcp/core/*.ts
-                                       →  config/mcp.config.ts
+index.ts          →  setup/run.ts      →  setup/skills.ts   →  config/agents.config.ts
+                                                         →  config/skills.config.ts
+                                      →  setup/mcp.ts      →  setup/mcp/targets/*.ts
+                                                         →  setup/mcp/core/*.ts
+                                                         →  config/mcp.config.ts
 ```
 
-`index.ts` is a pure orchestrator — it calls setup functions and nothing else. All logic lives in `setup/`. All data lives in `config/`.
+`index.ts` is a pure orchestrator — it calls `runSetup()` and nothing else. All logic lives in `setup/`. All data lives in `config/`.
 
 ## File Map
 
@@ -21,6 +21,8 @@ index.ts          →  setup/skills.ts   →  config/agents.config.ts
 **`index.ts`** — calls `setupSkills()` and `setupMcp()`. No logic here.
 
 ### Setup Layer (`setup/`)
+
+**`setup/run.ts`** — exports `runSetup()`. Parses CLI flags and chooses which setup phases to run. Supported flags: `--skills`, `--mcp`, and `--help`. With no phase flags, it runs both skills and MCP setup.
 
 **`setup/skills.ts`** — exports `setupSkills()`. Reads `activeAgents` and `skillsConfig`, then runs `bunx skills add <repo> --skill <name> -g -a <agent> -y` for each skill/agent combination via Bun's shell `$` template.
 
@@ -45,7 +47,7 @@ index.ts          →  setup/skills.ts   →  config/agents.config.ts
 - `gemini-cli.ts` — merges converted servers into `~/.gemini/settings.json`.
 - `kilo.ts` — merges converted servers into `~/.config/kilo/kilo.jsonc`.
 
-Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each target writer converts them to the format that agent expects. Examples: VS Code and Windsurf use `${env:VAR}`, Antigravity resolves `${VAR}` to concrete values while writing `mcp_config.json`, Gemini CLI uses `$VAR` in `env`, Codex uses `env_vars` / `env_http_headers`, and Kilo uses `{env:VAR}`.
+Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each target writer converts them to the format that agent expects. Examples: VS Code and Windsurf use `${env:VAR}`, Antigravity resolves `${VAR}` to concrete values while writing `mcp_config.json`, Gemini CLI uses `$VAR` in `env`, Codex uses `env_vars` / `env_http_headers`, and Kilo uses `{env:VAR}`. For Exa specifically, the HTTP server definition uses the `Authorization: Bearer ${EXA_API_KEY}` header shape.
 
 ### Config Layer (`config/`)
 
@@ -76,6 +78,17 @@ type McpServerHttp = {
 ```
 
 All env var values use `${VAR_NAME}` syntax. These are kept as literal strings in `~/.claude/settings.json` (Claude Code expands them at runtime from the system environment). When writing `.vscode/mcp.json`, the setup script converts them to `${env:VAR_NAME}`.
+
+Current Exa example in this repo:
+
+```ts
+exa: {
+  type: "http",
+  url: "https://mcp.exa.ai/mcp",
+  headers: { Authorization: "Bearer ${EXA_API_KEY}" },
+  tools: ["web_search_exa", "web_fetch_exa"],
+}
+```
 
 ## Where Configs Are Written
 
@@ -134,5 +147,7 @@ The project uses Bun as both runtime and package manager. `index.ts` uses top-le
 
 Run the setup:
 ```bash
-bun run index.ts  # installs skills + writes MCP configs for the active agents' targets
+bun run index.ts          # installs skills + writes MCP configs for the active agents' targets
+bun run index.ts --skills # installs only skills for the active agents
+bun run index.ts --mcp    # writes only MCP configs for the active agents' targets
 ```

@@ -1,5 +1,3 @@
-import { setupMcp } from "./setup/mcp";
-import { setupSkills } from "./setup/skills";
+import { runSetup } from "./setup/run";
 
-await setupSkills();
-await setupMcp();
+await runSetup();

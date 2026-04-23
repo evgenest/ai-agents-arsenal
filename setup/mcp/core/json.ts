@@ -75,7 +75,18 @@ function parseJsonc(text: string): JsonObject {
 export async function readJsonObject(filePath: string): Promise<JsonObject> {
   const file = Bun.file(filePath);
   if (!(await file.exists())) return {};
-  return (await file.json()) as JsonObject;
+
+  const text = (await file.text()).replace(/^\uFEFF/, "");
+  if (!text.trim()) return {};
+
+  try {
+    return JSON.parse(text) as JsonObject;
+  } catch (error) {
+    if (error instanceof Error) {
+      error.message = `Failed to parse JSON in ${filePath}: ${error.message}`;
+    }
+    throw error;
+  }
 }
 
 export async function readJsoncObject(filePath: string): Promise<JsonObject> {

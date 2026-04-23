@@ -32,7 +32,7 @@ export const mcpServers: Record<string, McpServer> = {
   exa: {
     type: "http",
     url: "https://mcp.exa.ai/mcp",
-    headers: { "x-api-key": "${EXA_API_KEY}" },
+    headers: { Authorization: "Bearer ${EXA_API_KEY}" },
     tools: ["web_search_exa", "web_fetch_exa"],
   },
   "21st-magic": {

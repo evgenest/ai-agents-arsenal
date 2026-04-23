@@ -18,7 +18,7 @@ For the historical evolution of the project from version to version, see [CHANGE
 |---|---|
 | `TAVILY_API_KEY` | [Tavily](https://tavily.com) |
 | `CONTEXT7_API_KEY` | [Context7](https://context7.com) |
-| `EXA_API_KEY` | [Exa](https://exa.ai) |
+| `EXA_API_KEY` | [Exa](https://exa.ai) — sent to the Exa MCP endpoint as `Authorization: Bearer ${EXA_API_KEY}` |
 | `MAGIC_API_KEY` | [21st.dev Magic](https://21st.dev) |
 
 **Windows** — Win + R → `sysdm.cpl` → Advanced → Environment Variables → System variables
@@ -38,6 +38,15 @@ bun install
 
 ```bash
 bun run index.ts
+```
+
+By default this runs both setup phases.
+
+To run only one phase:
+
+```bash
+bun run index.ts --skills
+bun run index.ts --mcp
 ```
 
 ## What Gets Installed
@@ -90,6 +99,11 @@ Open [`config/agents.config.ts`](config/agents.config.ts) and toggle `enabled`:
 
 Skills and MCP setup targets are driven by agents with `enabled: true`.
 
+You can also choose which setup phase to run without changing agent config:
+- `bun run index.ts` runs both skills and MCP setup
+- `bun run index.ts --skills` runs only skill installation
+- `bun run index.ts --mcp` runs only MCP config generation
+
 Current MCP target mapping:
 - `claude-code` writes to `~/.claude/settings.json`
 - `github-copilot` writes to `%APPDATA%/Code/User/mcp.json`
@@ -135,11 +149,14 @@ Open [`config/mcp.config.ts`](config/mcp.config.ts) and add an entry. Use `${VAR
 },
 ```
 
+The built-in `exa` server follows this same pattern and sends `Authorization: Bearer ${EXA_API_KEY}`.
+
 ## Project Structure
 
 ```
 index.ts                  # Entry point — orchestrates setup
 setup/
+  run.ts                  # Parses CLI flags and runs selected setup phases
   skills.ts               # Installs skills via bunx for active agents
   mcp.ts                  # Thin MCP orchestrator and public setup exports
   mcp/
