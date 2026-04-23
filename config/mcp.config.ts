@@ -16,17 +16,18 @@ export type McpServer = McpServerStdio | McpServerHttp;
 
 // Env var references use Claude Code's ${VAR} syntax.
 // The setup script auto-converts these to ${env:VAR} when writing .vscode/mcp.json.
+// For npx-based MCP servers, put "-y" first to suppress interactive install prompts.
 // Set the following env vars in your system before running:
 //   TAVILY_API_KEY, CONTEXT7_API_KEY, EXA_API_KEY, MAGIC_API_KEY
 export const mcpServers: Record<string, McpServer> = {
   tavily: {
     command: "npx",
-    args: ["tavily-mcp@0.2.15"],
+    args: ["-y", "tavily-mcp@0.2.15"],
     env: { TAVILY_API_KEY: "${TAVILY_API_KEY}" },
   },
   context7: {
     command: "npx",
-    args: ["@upstash/context7-mcp@latest"],
+    args: ["-y", "@upstash/context7-mcp@latest"],
     env: { CONTEXT7_API_KEY: "${CONTEXT7_API_KEY}" },
   },
   exa: {

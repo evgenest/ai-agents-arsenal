@@ -4,6 +4,20 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v4.1.1 - npx MCP prompt suppression
+
+Release date: 2026-04-23
+
+Tag: `v4.1.1`
+
+Changes since `v4.1.0`:
+- adds `-y` as the first argument for the built-in `npx`-based MCP servers so generated configs do not depend on interactive install confirmation
+- updates README and AGENTS examples to document the same `npx -y` convention for future MCP server additions
+
+Net effect:
+- generated stdio MCP configs are more reliable in non-interactive runtimes such as Antigravity
+- the change is intentionally narrow and does not alter the supported server list or transport shapes
+
 ## v4.1.0 - Selective setup execution and Exa auth fix
 
 Release date: 2026-04-23

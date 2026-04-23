@@ -135,10 +135,12 @@ Open [`config/mcp.config.ts`](config/mcp.config.ts) and add an entry. Use `${VAR
 ```ts
 "my-server": {
   command: "npx",
-  args: ["my-mcp-package@latest"],
+  args: ["-y", "my-mcp-package@latest"],
   env: { MY_API_KEY: "${MY_API_KEY}" },
 },
 ```
+
+For `npx`-based MCP servers, keep `"-y"` as the first argument so generated configs do not block on interactive install confirmation.
 
 **HTTP server:**
 ```ts

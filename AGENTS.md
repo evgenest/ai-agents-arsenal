@@ -128,11 +128,11 @@ In `config/mcp.config.ts`, add to `mcpServers`:
 ```ts
 "server-key": {
   command: "npx",
-  args: ["package-name@version"],
+  args: ["-y", "package-name@version"],
   env: { API_KEY: "${MY_ENV_VAR}" },
 },
 ```
-Use `${VAR}` for any value that should be read from the system environment. The setup script handles format conversion automatically.
+Use `${VAR}` for any value that should be read from the system environment. The setup script handles format conversion automatically. For `npx`-based MCP servers, keep `-y` first so generated configs do not depend on interactive confirmation.
 
 ### Add a new target tool
 
