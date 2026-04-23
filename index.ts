@@ -2,13 +2,15 @@ import { $ } from "bun";
 import { mkdirSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
-import { mcpServers, type McpServer } from "./mcp.config";
-import { skillsConfig } from "./skills.config";
+import { activeAgents } from "./config/agents.config";
+import { mcpServers, type McpServer } from "./config/mcp.config";
+import { skillsConfig } from "./config/skills.config";
 
-// Skills — install globally via Claude Code
+// Skills — install globally for all active agents
+const agentArgs = activeAgents.flatMap((a) => ["-a", a]);
 for (const entry of skillsConfig) {
   const skillArgs = entry.skills.flatMap((s) => ["--skill", s]);
-  await $`bunx skills add ${entry.repo} ${skillArgs} -g -a claude-code -y`;
+  await $`bunx skills add ${entry.repo} ${skillArgs} -g ${agentArgs} -y`;
 }
 
 // MCPs — write to ~/.claude/settings.json (covers Claude Code in terminal + VSCode extension)
