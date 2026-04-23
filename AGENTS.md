@@ -16,13 +16,14 @@ index.ts          →  setup/skills.ts   →  config/agents.config.ts
 
 ### Entry Point
 
-**`index.ts`** — calls `setupSkills()`, `setupClaudeCodeMcp()`, and `setupVscodeMcp()`. No logic here.
+**`index.ts`** — calls `setupSkills()` and `setupMcp()`. No logic here.
 
 ### Setup Layer (`setup/`)
 
 **`setup/skills.ts`** — exports `setupSkills()`. Reads `activeAgents` and `skillsConfig`, then runs `bunx skills add <repo> --skill <name> -g -a <agent> -y` for each skill/agent combination via Bun's shell `$` template.
 
-**`setup/mcp.ts`** — exports two functions:
+**`setup/mcp.ts`** — exports `setupMcp()` plus target-specific helpers:
+- `setupMcp()` — resolves active MCP targets from `config/agents.config.ts` and runs only the relevant MCP writers.
 - `setupClaudeCodeMcp()` — merges `mcpServers` into `~/.claude/settings.json`. Creates the file if absent. Safe to run repeatedly (merges, does not overwrite).
 - `setupVscodeMcp()` — merges `mcpServers` (converted to VSCode format) into `%APPDATA%/Code/User/mcp.json` (Windows) or the platform equivalent — the **global** VS Code user config, not a per-workspace file. Preserves existing servers and `inputs` entries.
 
@@ -30,7 +31,7 @@ The key transformation in `setup/mcp.ts`: env var references use `${VAR}` syntax
 
 ### Config Layer (`config/`)
 
-**`config/agents.config.ts`** — list of all supported agents with `enabled` boolean flags. Exports `agentsConfig` (full list) and `activeAgents` (filtered to enabled only, as string IDs). Edit `enabled` here to include or exclude agents from all operations.
+**`config/agents.config.ts`** — list of all supported agents with `enabled` boolean flags plus `mcpTargets`. Exports `agentsConfig` (full list), `activeAgents` (filtered to enabled only, as string IDs), and `activeMcpTargets` (deduplicated MCP config targets derived from enabled agents). Edit `enabled` here to include or exclude agents from all operations.
 
 Supported agent IDs: `claude-code`, `github-copilot`, `antigravity`, `cursor`, `windsurf`, `codex`, `gemini-cli`, `kilo`.
 
@@ -73,7 +74,7 @@ Skills are installed globally via the `bunx skills` CLI — they write to tool-s
 
 In `config/agents.config.ts`, add to `agentsConfig`:
 ```ts
-{ id: "new-agent-id", enabled: true },
+{ id: "new-agent-id", enabled: true, mcpTargets: [] },
 ```
 The `as const` on the array means the `id` values are typed as string literals. Adding a new entry is safe.
 
@@ -109,5 +110,5 @@ The project uses Bun as both runtime and package manager. `index.ts` uses top-le
 
 Run the setup:
 ```bash
-bun run index.ts  # installs skills + writes MCP configs globally for Claude Code and VS Code
+bun run index.ts  # installs skills + writes MCP configs for the active agents' targets
 ```

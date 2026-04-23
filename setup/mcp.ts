@@ -1,6 +1,7 @@
-import { mkdirSync, copyFileSync, existsSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
+import { activeMcpTargets, type McpTarget } from "../config/agents.config";
 import { mcpServers, type McpServer } from "../config/mcp.config";
 
 async function backupIfExists(filePath: string): Promise<string | null> {
@@ -28,6 +29,17 @@ function convertServerForVscode(server: McpServer): McpServer {
     );
   if (s.args) s.args = (s.args as string[]).map(toVscodeFormat);
   return s as McpServer;
+}
+
+const mcpSetupByTarget: Record<McpTarget, () => Promise<void>> = {
+  "claude-code": setupClaudeCodeMcp,
+  vscode: setupVscodeMcp,
+};
+
+export async function setupMcp() {
+  for (const target of activeMcpTargets) {
+    await mcpSetupByTarget[target]();
+  }
 }
 
 // Writes MCP servers to ~/.claude/settings.json (global — covers Claude Code CLI + VSCode extension)

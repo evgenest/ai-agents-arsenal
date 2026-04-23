@@ -76,11 +76,16 @@ bun run index.ts
 Open [`config/agents.config.ts`](config/agents.config.ts) and toggle `enabled`:
 
 ```ts
-{ id: "cursor",   enabled: true  },  // turn on
-{ id: "windsurf", enabled: false },  // turn off
+{ id: "cursor",   enabled: true,  mcpTargets: [] },  // turn on
+{ id: "windsurf", enabled: false, mcpTargets: [] },  // turn off
 ```
 
-Skills will be installed only for agents with `enabled: true`.
+Skills and MCP setup targets are driven by agents with `enabled: true`.
+
+Current MCP target mapping:
+- `claude-code` writes to `~/.claude/settings.json`
+- `github-copilot` writes to `%APPDATA%/Code/User/mcp.json`
+- `antigravity` writes to `%APPDATA%/Code/User/mcp.json`
 
 ### Add a skill
 
@@ -121,9 +126,9 @@ Open [`config/mcp.config.ts`](config/mcp.config.ts) and add an entry. Use `${VAR
 index.ts                  # Entry point — orchestrates setup
 setup/
   skills.ts               # Installs skills via bunx for active agents
-  mcp.ts                  # Writes MCP configs for Claude Code and VSCode
+  mcp.ts                  # Writes MCP configs for active agents' MCP targets
 config/
-  agents.config.ts        # Agent list with enabled/disabled flags
+  agents.config.ts        # Agent list with enabled/disabled flags and MCP target mapping
   skills.config.ts        # Skills and their source repos
   mcp.config.ts           # MCP server definitions and env var references
 ```
