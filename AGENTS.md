@@ -31,26 +31,25 @@ index.ts          →  setup/skills.ts   →  config/agents.config.ts
 - `json.ts` — JSON / JSONC readers and JSONC parsing.
 - `files.ts` — backup creation and parent-directory setup.
 - `paths.ts` — global config path resolution per target.
-- `converters.ts` — server-shape conversion for VS Code, Cursor, Windsurf, Gemini CLI, and Kilo.
+- `converters.ts` — server-shape conversion for Antigravity, VS Code, Cursor, Windsurf, Gemini CLI, and Kilo.
 - `codex.ts` — TOML rendering and managed-section updates for Codex.
 - `server.ts` — shared server-shape helpers.
 
 **`setup/mcp/targets/`** — one writer per MCP target:
 - `claude-code.ts` — merges `mcpServers` into `~/.claude/settings.json`.
 - `vscode.ts` — merges converted servers into `%APPDATA%/Code/User/mcp.json`.
+- `antigravity.ts` — merges converted servers into `~/.gemini/antigravity/mcp_config.json`.
 - `cursor.ts` — merges converted servers into `~/.cursor/mcp.json`.
 - `windsurf.ts` — merges converted servers into `~/.codeium/windsurf/mcp_config.json`.
 - `codex.ts` — writes managed `[mcp_servers.*]` entries into `~/.codex/config.toml`.
 - `gemini-cli.ts` — merges converted servers into `~/.gemini/settings.json`.
 - `kilo.ts` — merges converted servers into `~/.config/kilo/kilo.jsonc`.
 
-Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each target writer converts them to the format that agent expects. Examples: VS Code and Windsurf use `${env:VAR}`, Gemini CLI uses `$VAR` in `env`, Codex uses `env_vars` / `env_http_headers`, and Kilo uses `{env:VAR}`.
+Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each target writer converts them to the format that agent expects. Examples: VS Code and Windsurf use `${env:VAR}`, Antigravity resolves `${VAR}` to concrete values while writing `mcp_config.json`, Gemini CLI uses `$VAR` in `env`, Codex uses `env_vars` / `env_http_headers`, and Kilo uses `{env:VAR}`.
 
 ### Config Layer (`config/`)
 
 **`config/agents.config.ts`** — list of all supported agents with `enabled` boolean flags plus `mcpTargets`. Exports `agentsConfig` (full list), `activeAgents` (filtered to enabled only, as string IDs), and `activeMcpTargets` (deduplicated MCP config targets derived from enabled agents). Edit `enabled` here to include or exclude agents from all operations.
-
-Antigravity currently remains a provisional mapping to the VS Code MCP target. Its own dedicated global config path/flow is not yet verified in this repository.
 
 Supported agent IDs: `claude-code`, `github-copilot`, `antigravity`, `cursor`, `windsurf`, `codex`, `gemini-cli`, `kilo`.
 
@@ -84,6 +83,7 @@ All env var values use `${VAR_NAME}` syntax. These are kept as literal strings i
 |---|---|---|
 | `~/.claude/settings.json` | `setupClaudeCodeMcp()` | `mcpServers` key merged in |
 | `%APPDATA%/Code/User/mcp.json` | `setupVscodeMcp()` | `servers` key, VSCode format, global |
+| `~/.gemini/antigravity/mcp_config.json` | `setupAntigravityMcp()` | `mcpServers` key merged in |
 | `~/.cursor/mcp.json` | `setupCursorMcp()` | `mcpServers` key merged in |
 | `~/.codeium/windsurf/mcp_config.json` | `setupWindsurfMcp()` | `mcpServers` key merged in |
 | `~/.codex/config.toml` | `setupCodexMcp()` | managed `[mcp_servers.*]` sections |

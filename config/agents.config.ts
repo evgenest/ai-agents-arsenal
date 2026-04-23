@@ -1,6 +1,7 @@
 export type McpTarget =
   | "claude-code"
   | "vscode"
+  | "antigravity"
   | "cursor"
   | "windsurf"
   | "codex"
@@ -10,7 +11,7 @@ export type McpTarget =
 export const agentsConfig = [
   { id: "claude-code",    enabled: true,  mcpTargets: ["claude-code"] },
   { id: "github-copilot", enabled: true,  mcpTargets: ["vscode"] },
-  { id: "antigravity",    enabled: true,  mcpTargets: ["vscode"] },
+  { id: "antigravity",    enabled: true,  mcpTargets: ["antigravity"] },
   { id: "cursor",         enabled: false, mcpTargets: ["cursor"] },
   { id: "windsurf",       enabled: false, mcpTargets: ["windsurf"] },
   { id: "codex",          enabled: false, mcpTargets: ["codex"] },

@@ -1,4 +1,5 @@
 import { activeMcpTargets, type McpTarget } from "../config/agents.config";
+import { setupAntigravityMcp } from "./mcp/targets/antigravity";
 import { setupClaudeCodeMcp } from "./mcp/targets/claude-code";
 import { setupCodexMcp } from "./mcp/targets/codex";
 import { setupCursorMcp } from "./mcp/targets/cursor";
@@ -10,6 +11,7 @@ import { setupWindsurfMcp } from "./mcp/targets/windsurf";
 const mcpSetupByTarget: Record<McpTarget, () => Promise<void>> = {
   "claude-code": setupClaudeCodeMcp,
   vscode: setupVscodeMcp,
+  antigravity: setupAntigravityMcp,
   cursor: setupCursorMcp,
   windsurf: setupWindsurfMcp,
   codex: setupCodexMcp,

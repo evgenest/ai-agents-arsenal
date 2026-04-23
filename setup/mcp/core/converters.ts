@@ -3,6 +3,21 @@ import { resolveEnvReferences, toEnvScopedFormat, toGeminiEnvFormat, toKiloForma
 import type { JsonObject } from "./json";
 import { isHttpServer, mapStringRecord } from "./server";
 
+export function convertServerForAntigravity(server: McpServer): JsonObject {
+  if (isHttpServer(server)) {
+    return {
+      serverUrl: resolveEnvReferences(server.url),
+      headers: mapStringRecord(server.headers, resolveEnvReferences),
+    };
+  }
+
+  return {
+    command: server.command,
+    args: server.args?.map(resolveEnvReferences),
+    env: mapStringRecord(server.env, resolveEnvReferences),
+  };
+}
+
 export function convertServerForVscode(server: McpServer): McpServer {
   if (isHttpServer(server)) {
     return {

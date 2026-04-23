@@ -16,6 +16,10 @@ export function getVscodeMcpPath(): string {
   return join(getAppDataDir(), "Code", "User", "mcp.json");
 }
 
+export function getAntigravityMcpPath(): string {
+  return join(homedir(), ".gemini", "antigravity", "mcp_config.json");
+}
+
 export function getCursorMcpPath(): string {
   return join(homedir(), ".cursor", "mcp.json");
 }
