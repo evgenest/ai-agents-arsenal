@@ -34,12 +34,19 @@ export async function setupClaudeCodeMcp() {
   console.log(`MCP servers written to ${join(claudeDir, "settings.json")}`);
 }
 
-// Writes .vscode/mcp.json in cwd — run with --vscode from your project root
+// Writes to %APPDATA%\Code\User\mcp.json — global for all VS Code projects (Windows/macOS/Linux)
+// Preserves existing servers and inputs; only merges our servers in.
 export async function setupVscodeMcp() {
-  const vscodeDir = join(process.cwd(), ".vscode");
-  mkdirSync(vscodeDir, { recursive: true });
+  const appData =
+    process.env.APPDATA ??
+    (process.platform === "darwin"
+      ? join(homedir(), "Library", "Application Support")
+      : join(homedir(), ".config"));
 
-  const mcpJsonFile = Bun.file(join(vscodeDir, "mcp.json"));
+  const userDir = join(appData, "Code", "User");
+  mkdirSync(userDir, { recursive: true });
+
+  const mcpJsonFile = Bun.file(join(userDir, "mcp.json"));
   const existing = (await mcpJsonFile.exists()) ? await mcpJsonFile.json() : {};
   const config = {
     ...existing,
@@ -51,5 +58,5 @@ export async function setupVscodeMcp() {
     },
   };
   await Bun.write(mcpJsonFile, JSON.stringify(config, null, 2));
-  console.log(`MCP servers written to ${join(vscodeDir, "mcp.json")}`);
+  console.log(`MCP servers written to ${join(userDir, "mcp.json")}`);
 }

@@ -3,7 +3,4 @@ import { setupClaudeCodeMcp, setupVscodeMcp } from "./setup/mcp";
 
 await setupSkills();
 await setupClaudeCodeMcp();
-
-if (process.argv.includes("--vscode")) {
-  await setupVscodeMcp();
-}
+await setupVscodeMcp(); // writes to %APPDATA%/Code/User/mcp.json — global for all VS Code projects

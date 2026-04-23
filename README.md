@@ -35,11 +35,7 @@ bun install
 ### 3. Run
 
 ```bash
-# Install skills globally + write MCP servers to ~/.claude/settings.json
 bun run index.ts
-
-# Also generate .vscode/mcp.json for GitHub Copilot Chat in a project
-cd /path/to/your/project && bun run /path/to/ai-agents-arsenal/index.ts --vscode
 ```
 
 ## What Gets Installed
@@ -70,8 +66,8 @@ cd /path/to/your/project && bun run /path/to/ai-agents-arsenal/index.ts --vscode
 
 | Target | File | Covers |
 |---|---|---|
-| Claude Code (global) | `~/.claude/settings.json` | Claude Code CLI + VSCode extension |
-| GitHub Copilot Chat | `.vscode/mcp.json` in project | VSCode workspace (requires `--vscode` flag) |
+| Claude Code (global) | `~/.claude/settings.json` | Claude Code CLI + VS Code extension |
+| VS Code / GitHub Copilot (global) | `%APPDATA%/Code/User/mcp.json` | All VS Code projects on this machine |
 
 ## Configuration
 

@@ -16,7 +16,7 @@ index.ts          →  setup/skills.ts   →  config/agents.config.ts
 
 ### Entry Point
 
-**`index.ts`** — calls `setupSkills()`, `setupClaudeCodeMcp()`, and optionally `setupVscodeMcp()` (when `--vscode` flag is present). No logic here.
+**`index.ts`** — calls `setupSkills()`, `setupClaudeCodeMcp()`, and `setupVscodeMcp()`. No logic here.
 
 ### Setup Layer (`setup/`)
 
@@ -24,7 +24,7 @@ index.ts          →  setup/skills.ts   →  config/agents.config.ts
 
 **`setup/mcp.ts`** — exports two functions:
 - `setupClaudeCodeMcp()` — merges `mcpServers` into `~/.claude/settings.json`. Creates the file if absent. Safe to run repeatedly (merges, does not overwrite).
-- `setupVscodeMcp()` — merges `mcpServers` (converted to VSCode format) into `.vscode/mcp.json` in the current working directory. Creates `.vscode/` if absent.
+- `setupVscodeMcp()` — merges `mcpServers` (converted to VSCode format) into `%APPDATA%/Code/User/mcp.json` (Windows) or the platform equivalent — the **global** VS Code user config, not a per-workspace file. Preserves existing servers and `inputs` entries.
 
 The key transformation in `setup/mcp.ts`: env var references use `${VAR}` syntax (Claude Code format). When writing the VSCode config, all string values are converted by replacing `${VAR}` → `${env:VAR}`. This is handled by `toVscodeFormat()` and applied recursively across `env`, `headers`, and `args` fields.
 
@@ -63,7 +63,7 @@ All env var values use `${VAR_NAME}` syntax. These are kept as literal strings i
 | File | Written by | Contents |
 |---|---|---|
 | `~/.claude/settings.json` | `setupClaudeCodeMcp()` | `mcpServers` key merged in |
-| `.vscode/mcp.json` (cwd) | `setupVscodeMcp()` | `servers` key, VSCode format |
+| `%APPDATA%/Code/User/mcp.json` | `setupVscodeMcp()` | `servers` key, VSCode format, global |
 
 Skills are installed globally via the `bunx skills` CLI — they write to tool-specific global locations handled by that CLI.
 
@@ -109,6 +109,5 @@ The project uses Bun as both runtime and package manager. `index.ts` uses top-le
 
 Run the setup:
 ```bash
-bun run index.ts           # skills + Claude Code MCPs
-bun run index.ts --vscode  # + .vscode/mcp.json in cwd
+bun run index.ts  # installs skills + writes MCP configs globally for Claude Code and VS Code
 ```
