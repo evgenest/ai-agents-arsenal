@@ -138,7 +138,10 @@ Open [`config/mcp.config.ts`](config/mcp.config.ts) and add an entry. Use `${VAR
 index.ts                  # Entry point — orchestrates setup
 setup/
   skills.ts               # Installs skills via bunx for active agents
-  mcp.ts                  # Writes MCP configs for active agents' MCP targets
+  mcp.ts                  # Thin MCP orchestrator and public setup exports
+  mcp/
+    core/                 # Shared path/env/json/transform helpers
+    targets/              # One writer per MCP target
 config/
   agents.config.ts        # Agent list with enabled/disabled flags and MCP target mapping
   skills.config.ts        # Skills and their source repos

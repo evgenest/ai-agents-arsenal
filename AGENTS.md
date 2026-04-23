@@ -7,7 +7,9 @@ Setup repository for globally installing AI agent skills and MCP servers across 
 ```
 index.ts          →  setup/skills.ts   →  config/agents.config.ts
                                         →  config/skills.config.ts
-               →  setup/mcp.ts        →  config/mcp.config.ts
+               →  setup/mcp.ts        →  setup/mcp/targets/*.ts
+                                       →  setup/mcp/core/*.ts
+                                       →  config/mcp.config.ts
 ```
 
 `index.ts` is a pure orchestrator — it calls setup functions and nothing else. All logic lives in `setup/`. All data lives in `config/`.
@@ -22,17 +24,27 @@ index.ts          →  setup/skills.ts   →  config/agents.config.ts
 
 **`setup/skills.ts`** — exports `setupSkills()`. Reads `activeAgents` and `skillsConfig`, then runs `bunx skills add <repo> --skill <name> -g -a <agent> -y` for each skill/agent combination via Bun's shell `$` template.
 
-**`setup/mcp.ts`** — exports `setupMcp()` plus target-specific helpers:
-- `setupMcp()` — resolves active MCP targets from `config/agents.config.ts` and runs only the relevant MCP writers.
-- `setupClaudeCodeMcp()` — merges `mcpServers` into `~/.claude/settings.json`. Creates the file if absent. Safe to run repeatedly (merges, does not overwrite).
-- `setupVscodeMcp()` — merges `mcpServers` (converted to VSCode format) into `%APPDATA%/Code/User/mcp.json` (Windows) or the platform equivalent — the **global** VS Code user config, not a per-workspace file. Preserves existing servers and `inputs` entries.
-- `setupCursorMcp()` — merges `mcpServers` into `~/.cursor/mcp.json`.
-- `setupWindsurfMcp()` — merges `mcpServers` into `~/.codeium/windsurf/mcp_config.json`.
-- `setupCodexMcp()` — writes managed `[mcp_servers.*]` entries into `~/.codex/config.toml`.
-- `setupGeminiCliMcp()` — merges `mcpServers` into `~/.gemini/settings.json`.
-- `setupKiloMcp()` — merges `mcp` entries into `~/.config/kilo/kilo.jsonc`.
+**`setup/mcp.ts`** — thin MCP entry point. Exports `setupMcp()` plus the target-specific helpers, but delegates implementation to focused submodules.
 
-The key transformation in `setup/mcp.ts`: env var references use `${VAR}` syntax in `config/mcp.config.ts`, and each target writer converts them to the format that agent expects. Examples: VS Code and Windsurf use `${env:VAR}`, Gemini CLI uses `$VAR` in `env`, Codex uses `env_vars` / `env_http_headers`, and Kilo uses `{env:VAR}`.
+**`setup/mcp/core/`** — shared MCP internals:
+- `env.ts` — env reference conversions like `${VAR}` → `${env:VAR}` / `$VAR` / `{env:VAR}` and runtime resolution for tools that need concrete values.
+- `json.ts` — JSON / JSONC readers and JSONC parsing.
+- `files.ts` — backup creation and parent-directory setup.
+- `paths.ts` — global config path resolution per target.
+- `converters.ts` — server-shape conversion for VS Code, Cursor, Windsurf, Gemini CLI, and Kilo.
+- `codex.ts` — TOML rendering and managed-section updates for Codex.
+- `server.ts` — shared server-shape helpers.
+
+**`setup/mcp/targets/`** — one writer per MCP target:
+- `claude-code.ts` — merges `mcpServers` into `~/.claude/settings.json`.
+- `vscode.ts` — merges converted servers into `%APPDATA%/Code/User/mcp.json`.
+- `cursor.ts` — merges converted servers into `~/.cursor/mcp.json`.
+- `windsurf.ts` — merges converted servers into `~/.codeium/windsurf/mcp_config.json`.
+- `codex.ts` — writes managed `[mcp_servers.*]` entries into `~/.codex/config.toml`.
+- `gemini-cli.ts` — merges converted servers into `~/.gemini/settings.json`.
+- `kilo.ts` — merges converted servers into `~/.config/kilo/kilo.jsonc`.
+
+Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each target writer converts them to the format that agent expects. Examples: VS Code and Windsurf use `${env:VAR}`, Gemini CLI uses `$VAR` in `env`, Codex uses `env_vars` / `env_http_headers`, and Kilo uses `{env:VAR}`.
 
 ### Config Layer (`config/`)
 
@@ -112,9 +124,9 @@ Use `${VAR}` for any value that should be read from the system environment. The 
 ### Add a new target tool
 
 To write MCP configs for a new tool (e.g., Cursor's `mcp.json`):
-1. Add a new export in `setup/mcp.ts` following the pattern of `setupVscodeMcp()`
-2. Apply any format transformations that tool requires
-3. Call the new function from `index.ts`
+1. Add a target writer under `setup/mcp/targets/`
+2. Add or reuse shared transforms in `setup/mcp/core/` if the target needs a new format
+3. Export and register the new writer from `setup/mcp.ts`
 
 ## Runtime
 
