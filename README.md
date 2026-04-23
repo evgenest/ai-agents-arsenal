@@ -4,6 +4,8 @@ A single-command setup that installs skills and MCP servers globally across all 
 
 Run once on a new machine, get the same tools everywhere.
 
+For the historical evolution of the project from version to version, see [CHANGELOG.md](./CHANGELOG.md).
+
 ## Prerequisites
 
 - [Bun](https://bun.sh) — runtime and package manager
