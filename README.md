@@ -49,6 +49,14 @@ bun run index.ts --skills
 bun run index.ts --mcp
 ```
 
+To install skills into the current project instead of globally:
+
+```bash
+bun run index.ts --skills --project
+```
+
+`--project` only affects skill installation. MCP setup still writes to the configured global target files.
+
 ## What Gets Installed
 
 ### Skills
@@ -103,6 +111,7 @@ You can also choose which setup phase to run without changing agent config:
 - `bun run index.ts` runs both skills and MCP setup
 - `bun run index.ts --skills` runs only skill installation
 - `bun run index.ts --mcp` runs only MCP config generation
+- `bun run index.ts --skills --project` installs skills into the current project instead of using `-g`
 
 Current MCP target mapping:
 - `claude-code` writes to `~/.claude/settings.json`

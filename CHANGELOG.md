@@ -4,6 +4,21 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v4.2.0 - Project-local skill installation
+
+Release date: 2026-04-26
+
+Tag: `v4.2.0`
+
+Changes since `v4.1.1`:
+- adds a `--project` CLI flag so skills can be installed into the current project instead of always using global installation
+- keeps the default setup behavior unchanged, so existing commands still install skills globally unless `--project` is passed
+- updates README usage examples and configuration notes to document the new installation scope option
+
+Net effect:
+- the setup flow now supports both machine-wide skill bootstrapping and repository-local skill installation without introducing a separate command
+- MCP setup behavior remains global and unchanged, so the new scope flag only affects the skill installation phase
+
 ## v4.1.1 - npx MCP prompt suppression
 
 Release date: 2026-04-23

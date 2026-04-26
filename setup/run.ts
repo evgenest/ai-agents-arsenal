@@ -1,24 +1,27 @@
 import { setupMcp } from "./mcp";
-import { setupSkills } from "./skills";
+import { setupSkills, type SkillsInstallScope } from "./skills";
 
 type SetupSelection = {
   runSkills: boolean;
   runMcp: boolean;
+  skillsInstallScope: SkillsInstallScope;
 };
 
 function printUsage() {
-  console.log(`Usage: bun run index.ts [--skills] [--mcp]
+  console.log(`Usage: bun run index.ts [--skills] [--mcp] [--project]
 
 With no phase flags, both skills and MCP setup run.
 
   --skills  Run only skill installation
   --mcp     Run only MCP setup
+  --project Install skills into the current project instead of globally
   --help    Show this help message`);
 }
 
 function resolveSetupSelection(args: string[]): SetupSelection {
   let runSkills = false;
   let runMcp = false;
+  let skillsInstallScope: SkillsInstallScope = "global";
 
   for (const arg of args) {
     if (arg === "--skills") {
@@ -31,6 +34,11 @@ function resolveSetupSelection(args: string[]): SetupSelection {
       continue;
     }
 
+    if (arg === "--project") {
+      skillsInstallScope = "project";
+      continue;
+    }
+
     if (arg === "--") {
       continue;
     }
@@ -39,10 +47,10 @@ function resolveSetupSelection(args: string[]): SetupSelection {
   }
 
   if (!runSkills && !runMcp) {
-    return { runSkills: true, runMcp: true };
+    return { runSkills: true, runMcp: true, skillsInstallScope };
   }
 
-  return { runSkills, runMcp };
+  return { runSkills, runMcp, skillsInstallScope };
 }
 
 export async function runSetup(argv = process.argv.slice(2)) {
@@ -51,8 +59,8 @@ export async function runSetup(argv = process.argv.slice(2)) {
     return;
   }
 
-  const { runSkills, runMcp } = resolveSetupSelection([...new Set(argv)]);
+  const { runSkills, runMcp, skillsInstallScope } = resolveSetupSelection([...new Set(argv)]);
 
-  if (runSkills) await setupSkills();
+  if (runSkills) await setupSkills(skillsInstallScope);
   if (runMcp) await setupMcp();
 }
