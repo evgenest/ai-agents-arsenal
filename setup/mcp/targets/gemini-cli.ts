@@ -1,10 +1,10 @@
-import { mcpServers } from "../../../config/mcp.config";
+import type { McpServer } from "../../../config/mcp.config";
 import { convertServerForGemini } from "../core/converters";
 import { backupIfExists, ensureParentDir } from "../core/files";
 import { readJsonObject, type JsonObject } from "../core/json";
 import { getGeminiSettingsPath } from "../core/paths";
 
-export async function setupGeminiCliMcp() {
+export async function setupGeminiCliMcp(mcpServers: Record<string, McpServer>) {
   const settingsPath = getGeminiSettingsPath();
   ensureParentDir(settingsPath);
 

@@ -1,8 +1,9 @@
+import type { McpServer } from "../../../config/mcp.config";
 import { upsertCodexManagedSection } from "../core/codex";
 import { backupIfExists, ensureParentDir } from "../core/files";
 import { getCodexConfigPath } from "../core/paths";
 
-export async function setupCodexMcp() {
+export async function setupCodexMcp(mcpServers: Record<string, McpServer>) {
   const configPath = getCodexConfigPath();
   ensureParentDir(configPath);
 
@@ -12,6 +13,6 @@ export async function setupCodexMcp() {
   const configFile = Bun.file(configPath);
   const existing = (await configFile.exists()) ? await configFile.text() : "";
 
-  await Bun.write(configPath, upsertCodexManagedSection(existing));
+  await Bun.write(configPath, upsertCodexManagedSection(existing, mcpServers));
   console.log(`MCP servers written to ${configPath}`);
 }

@@ -10,31 +10,6 @@ For the historical evolution of the project from version to version, see [CHANGE
 
 - [Bun](https://bun.sh) — runtime and package manager
 
-## Release Flow
-
-After the one-time setup below, new npm releases can be published directly from GitHub.
-
-### One-time repository setup
-
-Configure npm Trusted Publishing for `@evgenest/ai-agents-arsenal` in the package's Access settings.
-
-Use this GitHub identity:
-- owner: `evgenest`
-- repository: `ai-agents-arsenal`
-- workflow file: `publish-npm.yml`
-
-This workflow uses GitHub Actions OIDC, so no `NPM_TOKEN` repository secret is required.
-
-### For each new release
-
-1. Update `package.json` and `CHANGELOG.md` to the new version.
-2. Push the version bump to `main`.
-3. Create a GitHub Release whose tag matches the package version, for example `v4.3.1`.
-
-When the release is published, GitHub Actions checks out that tag, uses a Node LTS runtime with a Trusted Publishing-compatible npm, runs `bun test` plus `bun run typecheck`, verifies that the tag matches `package.json`, and then runs `npm publish --provenance --access public` automatically via OIDC.
-
-You do not need to run `npm publish` locally for normal releases once Trusted Publisher is configured on npm.
-
 ## Quick Start
 
 ### 1. Set API keys as system environment variables
@@ -98,6 +73,16 @@ bunx @evgenest/ai-agents-arsenal --skills --project
 ```
 
 `--project` only affects skill installation. MCP setup still writes to the configured global target files.
+
+To run with your own prepared config files instead of the package defaults:
+
+```bash
+bun run index.ts --skills --agents-config ./my-config/agents.config.ts --skills-config ./my-config/skills.config.ts
+bun run index.ts --mcp --agents-config ./my-config/agents.config.ts --mcp-config ./my-config/mcp.config.ts
+bunx @evgenest/ai-agents-arsenal --skills --project --agents-config ./ai/agents.config.ts --skills-config ./ai/skills.config.ts
+```
+
+If you do not pass custom config flags, the CLI prints a preflight summary before making changes. That preview shows which skills or MCP servers will be installed, which built-in config files are being used, links to the matching config files from the current package release, and the override flags you can use next time.
 
 ## Cloud Agent Use
 
@@ -168,6 +153,8 @@ You can also choose which setup phase to run without changing agent config:
 - `bun run index.ts --skills` runs only skill installation
 - `bun run index.ts --mcp` runs only MCP config generation
 - `bun run index.ts --skills --project` installs skills into the current project instead of using `-g`
+- `bun run index.ts --agents-config ./my-config/agents.config.ts --skills-config ./my-config/skills.config.ts` installs skills from custom config files
+- `bun run index.ts --agents-config ./my-config/agents.config.ts --mcp-config ./my-config/mcp.config.ts` writes MCP config from custom config files
 
 Current MCP target mapping:
 - `claude-code` writes to `~/.claude/settings.json`
@@ -217,6 +204,8 @@ For `npx`-based MCP servers, keep `"-y"` as the first argument so generated conf
 ```
 
 The built-in `exa` server follows this same pattern and sends `Authorization: Bearer ${EXA_API_KEY}`.
+
+If you rely on the built-in MCP config, the CLI preview also reminds you which environment variables are referenced and whether any `npx`-based servers need `"-y"` as the first argument.
 
 ## Project Structure
 

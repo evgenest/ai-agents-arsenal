@@ -1,10 +1,10 @@
-import { mcpServers } from "../../../config/mcp.config";
+import type { McpServer } from "../../../config/mcp.config";
 import { convertServerForAntigravity } from "../core/converters";
 import { backupIfExists, ensureParentDir } from "../core/files";
 import { readJsonObject, type JsonObject } from "../core/json";
 import { getAntigravityMcpPath } from "../core/paths";
 
-export async function setupAntigravityMcp() {
+export async function setupAntigravityMcp(mcpServers: Record<string, McpServer>) {
   const mcpConfigPath = getAntigravityMcpPath();
   ensureParentDir(mcpConfigPath);
 

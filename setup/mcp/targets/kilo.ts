@@ -1,10 +1,10 @@
-import { mcpServers } from "../../../config/mcp.config";
+import type { McpServer } from "../../../config/mcp.config";
 import { convertServerForKilo } from "../core/converters";
 import { backupIfExists, ensureParentDir } from "../core/files";
 import { readJsoncObject, type JsonObject } from "../core/json";
 import { getKiloConfigPath } from "../core/paths";
 
-export async function setupKiloMcp() {
+export async function setupKiloMcp(mcpServers: Record<string, McpServer>) {
   const configPath = getKiloConfigPath();
   ensureParentDir(configPath);
 

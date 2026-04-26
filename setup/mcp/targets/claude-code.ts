@@ -1,9 +1,9 @@
-import { mcpServers } from "../../../config/mcp.config";
+import type { McpServer } from "../../../config/mcp.config";
 import { backupIfExists, ensureParentDir } from "../core/files";
 import { readJsonObject, type JsonObject } from "../core/json";
 import { getClaudeCodeSettingsPath } from "../core/paths";
 
-export async function setupClaudeCodeMcp() {
+export async function setupClaudeCodeMcp(mcpServers: Record<string, McpServer>) {
   const settingsPath = getClaudeCodeSettingsPath();
   ensureParentDir(settingsPath);
 

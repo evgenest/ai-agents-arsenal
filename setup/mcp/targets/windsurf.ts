@@ -1,10 +1,10 @@
-import { mcpServers } from "../../../config/mcp.config";
+import type { McpServer } from "../../../config/mcp.config";
 import { convertServerForWindsurf } from "../core/converters";
 import { backupIfExists, ensureParentDir } from "../core/files";
 import { readJsonObject, type JsonObject } from "../core/json";
 import { getWindsurfMcpPath } from "../core/paths";
 
-export async function setupWindsurfMcp() {
+export async function setupWindsurfMcp(mcpServers: Record<string, McpServer>) {
   const mcpJsonPath = getWindsurfMcpPath();
   ensureParentDir(mcpJsonPath);
 

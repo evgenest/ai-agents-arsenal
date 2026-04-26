@@ -2,6 +2,31 @@
 
 Setup repository for globally installing AI agent skills and MCP servers across multiple coding tools. The single source of truth for agent tooling on this machine.
 
+## Release Flow
+
+After the one-time setup below, new npm releases can be published directly from GitHub.
+
+### One-time repository setup
+
+Configure npm Trusted Publishing for `@evgenest/ai-agents-arsenal` in the package's Access settings.
+
+Use this GitHub identity:
+- owner: `evgenest`
+- repository: `ai-agents-arsenal`
+- workflow file: `publish-npm.yml`
+
+This workflow uses GitHub Actions OIDC, so no `NPM_TOKEN` repository secret is required.
+
+### For each new release
+
+1. Update `package.json` and `CHANGELOG.md` to the new version.
+2. Push the version bump to `main`.
+3. Create a GitHub Release whose tag matches the package version, for example `v4.3.1`.
+
+When the release is published, GitHub Actions checks out that tag, uses a Node LTS runtime with a Trusted Publishing-compatible npm, runs `bun test` plus `bun run typecheck`, verifies that the tag matches `package.json`, and then runs `npm publish --provenance --access public` automatically via OIDC.
+
+You do not need to run `npm publish` locally for normal releases once Trusted Publisher is configured on npm.
+
 ## Architecture
 
 ```
@@ -22,11 +47,15 @@ index.ts          →  setup/run.ts      →  setup/skills.ts   →  config/agen
 
 ### Setup Layer (`setup/`)
 
-**`setup/run.ts`** — exports `runSetup()`. Parses CLI flags and chooses which setup phases to run. Supported flags: `--skills`, `--mcp`, and `--help`. With no phase flags, it runs both skills and MCP setup.
+**`setup/run.ts`** — exports `runSetup()`. Parses CLI flags and chooses which setup phases to run. Supported flags: `--skills`, `--mcp`, `--project`, `--agents-config`, `--skills-config`, `--mcp-config`, and `--help`. With no phase flags, it runs both skills and MCP setup. Before applying changes it prints a phase-specific preview of the loaded setup.
 
-**`setup/skills.ts`** — exports `setupSkills()`. Reads `activeAgents` and `skillsConfig`, then runs `bunx skills add <repo> --skill <name> -g -a <agent> -y` for each skill/agent combination via Bun's shell `$` template.
+**`setup/config.ts`** — runtime config loader. Resolves default versus user-provided config paths, imports config modules dynamically, validates their exports, and derives `activeAgents` plus `activeMcpTargets` from the loaded agent config.
 
-**`setup/mcp.ts`** — thin MCP entry point. Exports `setupMcp()` plus the target-specific helpers, but delegates implementation to focused submodules.
+**`setup/preflight.ts`** — renders the setup preview shown before installation. Prints phase-specific details for skills and MCP along with config source info, environment variable references, and override flag hints.
+
+**`setup/skills.ts`** — exports `setupSkills()`. Receives `activeAgents` and `skillsConfig`, then runs `bunx skills add <repo> --skill <name> -g -a <agent> -y` for each skill/agent combination via Bun's shell `$` template.
+
+**`setup/mcp.ts`** — thin MCP entry point. Receives loaded `activeMcpTargets` plus `mcpServers`, then delegates target-specific writes to focused submodules.
 
 **`setup/mcp/core/`** — shared MCP internals:
 - `env.ts` — env reference conversions like `${VAR}` → `${env:VAR}` / `$VAR` / `{env:VAR}` and runtime resolution for tools that need concrete values.
@@ -51,7 +80,7 @@ Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each
 
 ### Config Layer (`config/`)
 
-**`config/agents.config.ts`** — list of all supported agents with `enabled` boolean flags plus `mcpTargets`. Exports `agentsConfig` (full list), `activeAgents` (filtered to enabled only, as string IDs), and `activeMcpTargets` (deduplicated MCP config targets derived from enabled agents). Edit `enabled` here to include or exclude agents from all operations.
+**`config/agents.config.ts`** — list of all supported agents with `enabled` boolean flags plus `mcpTargets`. The runtime loader derives `activeAgents` and `activeMcpTargets` from this array after loading either the default file or a user-provided override. Edit `enabled` here to include or exclude agents from all operations.
 
 Supported agent IDs: `claude-code`, `github-copilot`, `antigravity`, `cursor`, `windsurf`, `codex`, `gemini-cli`, `kilo`.
 
@@ -150,6 +179,8 @@ Run the setup:
 bun run index.ts          # installs skills + writes MCP configs for the active agents' targets
 bun run index.ts --skills # installs only skills for the active agents
 bun run index.ts --mcp    # writes only MCP configs for the active agents' targets
+bun run index.ts --skills --project --agents-config ./my/agents.config.ts --skills-config ./my/skills.config.ts
+bun run index.ts --mcp --agents-config ./my/agents.config.ts --mcp-config ./my/mcp.config.ts
 bunx @evgenest/ai-agents-arsenal          # same flow via the published npm package
 bunx @evgenest/ai-agents-arsenal --skills # published package, skills only
 bunx @evgenest/ai-agents-arsenal --mcp    # published package, MCP only

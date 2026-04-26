@@ -1,4 +1,4 @@
-import { mcpServers, type McpServer } from "../../../config/mcp.config";
+import type { McpServer } from "../../../config/mcp.config";
 import { extractDirectEnvReference, resolveEnvReferences } from "./env";
 import { isHttpServer } from "./server";
 
@@ -86,7 +86,7 @@ function renderCodexServer(name: string, server: McpServer): string {
   return `${lines.join("\n")}\n`;
 }
 
-function renderCodexManagedSection(): string {
+function renderCodexManagedSection(mcpServers: Record<string, McpServer>): string {
   const sections = Object.entries(mcpServers)
     .map(([name, server]) => renderCodexServer(name, server))
     .join("\n");
@@ -94,8 +94,8 @@ function renderCodexManagedSection(): string {
   return `${CODEX_MANAGED_SECTION_START}\n${sections.trim()}\n${CODEX_MANAGED_SECTION_END}`;
 }
 
-export function upsertCodexManagedSection(existingText: string): string {
-  const managedSection = renderCodexManagedSection();
+export function upsertCodexManagedSection(existingText: string, mcpServers: Record<string, McpServer>): string {
+  const managedSection = renderCodexManagedSection(mcpServers);
   const existing = existingText.trimEnd();
   const sectionPattern = new RegExp(
     `${CODEX_MANAGED_SECTION_START}[\\s\\S]*?${CODEX_MANAGED_SECTION_END}`,

@@ -1,10 +1,10 @@
-import { mcpServers } from "../../../config/mcp.config";
+import type { McpServer } from "../../../config/mcp.config";
 import { convertServerForCursor } from "../core/converters";
 import { backupIfExists, ensureParentDir } from "../core/files";
 import { readJsonObject, type JsonObject } from "../core/json";
 import { getCursorMcpPath } from "../core/paths";
 
-export async function setupCursorMcp() {
+export async function setupCursorMcp(mcpServers: Record<string, McpServer>) {
   const mcpJsonPath = getCursorMcpPath();
   ensureParentDir(mcpJsonPath);
 

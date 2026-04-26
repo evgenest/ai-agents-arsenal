@@ -1,10 +1,10 @@
-import { mcpServers } from "../../../config/mcp.config";
+import type { McpServer } from "../../../config/mcp.config";
 import { convertServerForVscode } from "../core/converters";
 import { backupIfExists, ensureParentDir } from "../core/files";
 import { readJsonObject, type JsonObject } from "../core/json";
 import { getVscodeMcpPath } from "../core/paths";
 
-export async function setupVscodeMcp() {
+export async function setupVscodeMcp(mcpServers: Record<string, McpServer>) {
   const mcpJsonPath = getVscodeMcpPath();
   ensureParentDir(mcpJsonPath);
 

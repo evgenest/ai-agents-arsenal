@@ -4,6 +4,24 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v4.4.0 - Custom config inputs and setup preview
+
+Release date: 2026-04-26
+
+Tag: `v4.4.0`
+
+Changes since `v4.3.4`:
+- adds `--agents-config`, `--skills-config`, and `--mcp-config` so the CLI can load prepared custom config files instead of only using the built-in defaults
+- moves setup config loading to runtime, validates custom config exports, and threads loaded agent, skills, and MCP data through the setup pipeline instead of relying on static imports
+- prints a phase-specific preflight preview before making changes so users can see the skills or MCP servers that will be installed, the environment variables involved, and the matching default config files from the current package release
+- updates the npm publish workflow to also react to the `release: released` event so promoting a verified pre-release to stable triggers the publish job
+- updates README and AGENTS documentation to cover the new config override flow and preview behavior
+
+Net effect:
+- users can prepare multiple config variants ahead of time and choose one at execution time without editing the package source
+- the default install path is more transparent because the CLI now explains what it is about to install and how to override it
+- staged GitHub releases can now be safely promoted from pre-release to stable without losing the npm publish automation
+
 ## v4.3.4 - GitHub Actions runtime refresh
 
 Release date: 2026-04-26

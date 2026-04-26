@@ -1,10 +1,13 @@
 import { $ } from "bun";
-import { activeAgents } from "../config/agents.config";
-import { skillsConfig } from "../config/skills.config";
+import type { SkillsConfigEntry } from "./config";
 
 export type SkillsInstallScope = "global" | "project";
 
-export async function setupSkills(scope: SkillsInstallScope = "global") {
+export async function setupSkills(
+  activeAgents: string[],
+  skillsConfig: SkillsConfigEntry[],
+  scope: SkillsInstallScope = "global",
+) {
   const agentArgs = activeAgents.flatMap((a) => ["-a", a]);
   const globalFlag = scope === "global" ? ["-g"] : [];
   for (const entry of skillsConfig) {
