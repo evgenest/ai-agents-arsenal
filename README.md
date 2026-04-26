@@ -31,7 +31,7 @@ This workflow uses GitHub Actions OIDC, so no `NPM_TOKEN` repository secret is r
 2. Push the version bump to `main`.
 3. Create a GitHub Release whose tag matches the package version, for example `v4.3.1`.
 
-When the release is published, GitHub Actions checks out that tag, updates npm to a Trusted Publishing-compatible version, runs `bun test` plus `bun run typecheck`, verifies that the tag matches `package.json`, and then runs `npm publish --provenance --access public` automatically via OIDC.
+When the release is published, GitHub Actions checks out that tag, uses a Node LTS runtime with a Trusted Publishing-compatible npm, runs `bun test` plus `bun run typecheck`, verifies that the tag matches `package.json`, and then runs `npm publish --provenance --access public` automatically via OIDC.
 
 You do not need to run `npm publish` locally for normal releases once Trusted Publisher is configured on npm.
 

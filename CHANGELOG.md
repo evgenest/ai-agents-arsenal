@@ -4,6 +4,20 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v4.3.3 - Trusted Publishing runner compatibility fix
+
+Release date: 2026-04-26
+
+Tag: `v4.3.3`
+
+Changes since `v4.3.2`:
+- replaces the in-workflow `npm install -g npm@latest` step with a direct Node LTS setup that provides a compatible npm for Trusted Publishing
+- keeps the OIDC-based publish flow and provenance emission intact while removing the failing self-upgrade path on the GitHub runner
+
+Net effect:
+- the Trusted Publishing release job no longer depends on mutating the runner's preinstalled npm before publish
+- the next release can validate the OIDC publish path without the `MODULE_NOT_FOUND` failure seen in `v4.3.2`
+
 ## v4.3.2 - Trusted Publishing for npm releases
 
 Release date: 2026-04-26
