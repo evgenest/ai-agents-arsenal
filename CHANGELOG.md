@@ -13,10 +13,12 @@ Tag: `v4.3.3`
 Changes since `v4.3.2`:
 - replaces the in-workflow `npm install -g npm@latest` step with a direct Node LTS setup that provides a compatible npm for Trusted Publishing
 - keeps the OIDC-based publish flow and provenance emission intact while removing the failing self-upgrade path on the GitHub runner
+- clarifies in the docs that the published npm package can install project-local skills which can be committed for cloud agents that clone the repository
 
 Net effect:
 - the Trusted Publishing release job no longer depends on mutating the runner's preinstalled npm before publish
 - the next release can validate the OIDC publish path without the `MODULE_NOT_FOUND` failure seen in `v4.3.2`
+- the README now documents the repository-local skills workflow for cloud agents in addition to local machine setup
 
 ## v4.3.2 - Trusted Publishing for npm releases
 

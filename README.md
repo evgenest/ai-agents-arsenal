@@ -1,6 +1,6 @@
 # AI Agents Arsenal
 
-A single-command setup that installs skills and MCP servers globally across all your AI coding agents — Claude Code, GitHub Copilot, Antigravity, Cursor, Windsurf, and more.
+A single-command setup that installs skills and MCP servers for your AI coding agents — globally on your machine when needed, or directly inside a project when you want the repository itself to carry the skill setup.
 
 Run once on a new machine, get the same tools everywhere.
 
@@ -98,6 +98,20 @@ bunx @evgenest/ai-agents-arsenal --skills --project
 ```
 
 `--project` only affects skill installation. MCP setup still writes to the configured global target files.
+
+## Cloud Agent Use
+
+Because the tool is published as an npm package, you can also use it to install skills directly into a repository instead of only configuring local machines.
+
+Run:
+
+```bash
+bunx @evgenest/ai-agents-arsenal --skills --project
+```
+
+Then commit the generated project-local skill files to the repository. When a cloud agent such as GitHub Copilot or another repo-cloning agent starts from that repository, it gets the same checked-in skills as part of the clone and can use the project's skill setup immediately.
+
+This repository-local pattern applies to skills. MCP configuration remains machine-specific and is still written to each target tool's global config location.
 
 ## What Gets Installed
 
