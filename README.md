@@ -28,31 +28,48 @@ For the historical evolution of the project from version to version, see [CHANGE
 export TAVILY_API_KEY=your_key_here
 ```
 
-### 2. Install dependencies
+### 2. Run the published package from any project
+
+```bash
+bunx @evgenest/ai-agents-arsenal
+```
+
+To install only skills into the current project:
+
+```bash
+bunx @evgenest/ai-agents-arsenal --skills --project
+```
+
+This keeps skill installation local to the project you run the command from. MCP setup still writes to the configured global agent config files.
+
+### 3. Clone the repo if you want to customize the defaults
 
 ```bash
 bun install
 ```
 
-### 3. Run
+Then run the local entrypoint:
 
 ```bash
 bun run index.ts
 ```
 
-By default this runs both setup phases.
+By default both the published package and the local entrypoint run both setup phases.
 
 To run only one phase:
 
 ```bash
 bun run index.ts --skills
 bun run index.ts --mcp
+bunx @evgenest/ai-agents-arsenal --skills
+bunx @evgenest/ai-agents-arsenal --mcp
 ```
 
 To install skills into the current project instead of globally:
 
 ```bash
 bun run index.ts --skills --project
+bunx @evgenest/ai-agents-arsenal --skills --project
 ```
 
 `--project` only affects skill installation. MCP setup still writes to the configured global target files.

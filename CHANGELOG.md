@@ -4,6 +4,21 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v4.3.0 - npm package publication readiness
+
+Release date: 2026-04-26
+
+Tag: `v4.3.0`
+
+Changes since `v4.2.0`:
+- makes the repository publishable as the public npm package `@evgenest/ai-agents-arsenal`
+- adds npm package metadata and a CLI bin entry so the setup can be executed with `bunx @evgenest/ai-agents-arsenal`
+- adds focused CLI argument parsing tests and updates the help/docs to cover the published-package workflow
+
+Net effect:
+- the same setup flow can now be distributed through npm instead of requiring a repo clone first
+- project-local skill installation remains available through `--skills --project`, including when the tool is run via `bunx`
+
 ## v4.2.0 - Project-local skill installation
 
 Release date: 2026-04-26
