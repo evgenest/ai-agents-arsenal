@@ -4,6 +4,21 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v4.3.2 - Trusted Publishing for npm releases
+
+Release date: 2026-04-26
+
+Tag: `v4.3.2`
+
+Changes since `v4.3.1`:
+- migrates the npm publish workflow from a long-lived `NPM_TOKEN` secret to npm Trusted Publishing via GitHub Actions OIDC
+- updates the publish workflow permissions and npm invocation so release publishes can mint an id-token and emit provenance
+- rewrites the documented release setup to use npm Trusted Publisher package settings instead of a repository secret
+
+Net effect:
+- future GitHub release publishes no longer depend on a stored npm token in the repository
+- npm release automation matches npm's current recommended CI publishing model and is ready to validate on the next tag
+
 ## v4.3.1 - Release automation and publish manifest fix
 
 Release date: 2026-04-26

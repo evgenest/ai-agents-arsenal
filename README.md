@@ -16,7 +16,14 @@ After the one-time setup below, new npm releases can be published directly from 
 
 ### One-time repository setup
 
-Add an `NPM_TOKEN` repository secret with an npm automation token that has permission to publish `@evgenest/ai-agents-arsenal`.
+Configure npm Trusted Publishing for `@evgenest/ai-agents-arsenal` in the package's Access settings.
+
+Use this GitHub identity:
+- owner: `evgenest`
+- repository: `ai-agents-arsenal`
+- workflow file: `publish-npm.yml`
+
+This workflow uses GitHub Actions OIDC, so no `NPM_TOKEN` repository secret is required.
 
 ### For each new release
 
@@ -24,9 +31,9 @@ Add an `NPM_TOKEN` repository secret with an npm automation token that has permi
 2. Push the version bump to `main`.
 3. Create a GitHub Release whose tag matches the package version, for example `v4.3.1`.
 
-When the release is published, GitHub Actions checks out that tag, runs `bun test` plus `bun run typecheck`, verifies that the tag matches `package.json`, and then runs `npm publish --access public` automatically.
+When the release is published, GitHub Actions checks out that tag, updates npm to a Trusted Publishing-compatible version, runs `bun test` plus `bun run typecheck`, verifies that the tag matches `package.json`, and then runs `npm publish --provenance --access public` automatically via OIDC.
 
-You do not need to run `npm publish` locally for normal releases once the secret is configured.
+You do not need to run `npm publish` locally for normal releases once Trusted Publisher is configured on npm.
 
 ## Quick Start
 
