@@ -4,6 +4,20 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v4.3.4 - GitHub Actions runtime refresh
+
+Release date: 2026-04-26
+
+Tag: `v4.3.4`
+
+Changes since `v4.3.3`:
+- updates the npm publish workflow from `actions/checkout@v4` to `actions/checkout@v6`
+- updates the npm publish workflow from `actions/setup-node@v4` to `actions/setup-node@v6`
+
+Net effect:
+- the release workflow is aligned with the current major versions of the core GitHub actions it depends on
+- the repository is prepared for GitHub's Node 20 action runtime deprecation without changing the Trusted Publishing flow
+
 ## v4.3.3 - Trusted Publishing runner compatibility fix
 
 Release date: 2026-04-26
