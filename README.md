@@ -10,6 +10,24 @@ For the historical evolution of the project from version to version, see [CHANGE
 
 - [Bun](https://bun.sh) — runtime and package manager
 
+## Release Flow
+
+After the one-time setup below, new npm releases can be published directly from GitHub.
+
+### One-time repository setup
+
+Add an `NPM_TOKEN` repository secret with an npm automation token that has permission to publish `@evgenest/ai-agents-arsenal`.
+
+### For each new release
+
+1. Update `package.json` and `CHANGELOG.md` to the new version.
+2. Push the version bump to `main`.
+3. Create a GitHub Release whose tag matches the package version, for example `v4.3.1`.
+
+When the release is published, GitHub Actions checks out that tag, runs `bun test` plus `bun run typecheck`, verifies that the tag matches `package.json`, and then runs `npm publish --access public` automatically.
+
+You do not need to run `npm publish` locally for normal releases once the secret is configured.
+
 ## Quick Start
 
 ### 1. Set API keys as system environment variables

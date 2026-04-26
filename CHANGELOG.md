@@ -4,6 +4,21 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v4.3.1 - Release automation and publish manifest fix
+
+Release date: 2026-04-26
+
+Tag: `v4.3.1`
+
+Changes since `v4.3.0`:
+- normalizes the npm `bin` entry to the form npm expects, which removes the publish-time auto-correction warning for the package CLI
+- adds a GitHub Actions workflow that publishes the package to npm when a matching GitHub Release is published
+- documents the release flow so version bumps, GitHub releases, and npm publication stay aligned
+
+Net effect:
+- future npm releases can be driven from GitHub instead of running `npm publish` manually from a local terminal
+- the package manifest now passes dry-run packaging without the previous `bin` warning
+
 ## v4.3.0 - npm package publication readiness
 
 Release date: 2026-04-26
