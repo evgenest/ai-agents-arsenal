@@ -8,7 +8,9 @@ type SetupSelection = {
 };
 
 function printUsage() {
-  console.log(`Usage: bun run index.ts [--skills] [--mcp] [--project]
+  console.log(`Usage:
+  bun run index.ts [--skills] [--mcp] [--project]
+  bunx @evgenest/ai-agents-arsenal [--skills] [--mcp] [--project]
 
 With no phase flags, both skills and MCP setup run.
 
@@ -18,7 +20,7 @@ With no phase flags, both skills and MCP setup run.
   --help    Show this help message`);
 }
 
-function resolveSetupSelection(args: string[]): SetupSelection {
+export function resolveSetupSelection(args: string[]): SetupSelection {
   let runSkills = false;
   let runMcp = false;
   let skillsInstallScope: SkillsInstallScope = "global";

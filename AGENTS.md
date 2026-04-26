@@ -12,13 +12,13 @@ index.ts          →  setup/run.ts      →  setup/skills.ts   →  config/agen
                                                          →  config/mcp.config.ts
 ```
 
-`index.ts` is a pure orchestrator — it calls `runSetup()` and nothing else. All logic lives in `setup/`. All data lives in `config/`.
+`index.ts` is the CLI entry point for both local repo usage and the published npm package — it calls `runSetup()` and nothing else. All logic lives in `setup/`. All data lives in `config/`.
 
 ## File Map
 
 ### Entry Point
 
-**`index.ts`** — calls `setupSkills()` and `setupMcp()`. No logic here.
+**`index.ts`** — npm/bin entry point with a Bun shebang; calls `setupSkills()` and `setupMcp()`. No logic here.
 
 ### Setup Layer (`setup/`)
 
@@ -150,4 +150,7 @@ Run the setup:
 bun run index.ts          # installs skills + writes MCP configs for the active agents' targets
 bun run index.ts --skills # installs only skills for the active agents
 bun run index.ts --mcp    # writes only MCP configs for the active agents' targets
+bunx @evgenest/ai-agents-arsenal          # same flow via the published npm package
+bunx @evgenest/ai-agents-arsenal --skills # published package, skills only
+bunx @evgenest/ai-agents-arsenal --mcp    # published package, MCP only
 ```

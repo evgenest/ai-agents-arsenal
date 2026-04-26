@@ -1,12 +1,37 @@
 {
-  "name": "ai-agents-arsenal",
+  "name": "@evgenest/ai-agents-arsenal",
+  "version": "4.3.0",
+  "description": "Install AI agent skills and baseline MCP configs across supported tools.",
+  "license": "MIT",
   "module": "index.ts",
   "type": "module",
-  "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
+  "bin": {
+    "ai-agents-arsenal": "./index.ts"
   },
-  "peerDependencies": {
+  "files": [
+    "config",
+    "setup",
+    "index.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/evgenest/ai-agents-arsenal.git"
+  },
+  "bugs": {
+    "url": "https://github.com/evgenest/ai-agents-arsenal/issues"
+  },
+  "homepage": "https://github.com/evgenest/ai-agents-arsenal#readme",
+  "devDependencies": {
+    "@types/bun": "latest",
     "typescript": "^5"
   }
 }
