@@ -7,12 +7,8 @@ on:
       - released
 
 jobs:
-  publish:
-    if: ${{ !github.event.release.prerelease }}
+  verify:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     steps:
       - name: Check out release tag
         uses: actions/checkout@v6
@@ -48,6 +44,30 @@ jobs:
 
       - name: Run typecheck
         run: bun run typecheck
+
+  publish:
+    needs: verify
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
       - name: Publish to npm
         run: npm publish --provenance --access public
