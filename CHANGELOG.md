@@ -4,6 +4,21 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v4.5.0 - Cloudflare and safe-release skills
+
+Release date: 2026-05-20
+
+Tag: `v4.5.0`
+
+Changes since `v4.4.0`:
+- adds `web-perf` and `wrangler` from `cloudflare/skills` to the skills config
+- adds `safe-release` from `evgenest/safe-release` to the skills config
+- updates README skills table to reflect the three new entries
+
+Net effect:
+- the default install now includes Cloudflare Wrangler CLI guidance and web performance auditing out of the box
+- the safe GitHub release workflow (pre-release → promote to stable) is part of the standard skill set
+
 ## v4.4.0 - Custom config inputs and setup preview
 
 Release date: 2026-04-26

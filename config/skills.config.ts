@@ -31,4 +31,12 @@ export const skillsConfig = [
     repo: "vercel-labs/agent-skills",
     skills: ["vercel-composition-patterns", "vercel-react-best-practices", "web-design-guidelines"],
   },
+  {
+    repo: "cloudflare/skills",
+    skills: ["web-perf", "wrangler"],
+  },
+  {
+    repo: "evgenest/safe-release",
+    skills: ["safe-release"],
+  },
 ];

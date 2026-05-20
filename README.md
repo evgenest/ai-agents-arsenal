@@ -112,6 +112,8 @@ This repository-local pattern applies to skills. MCP configuration remains machi
 | `next-best-practices` | vercel-labs/next-skills |
 | `shadcn` | shadcn/ui |
 | `vercel-composition-patterns`, `vercel-react-best-practices`, `web-design-guidelines` | vercel-labs/agent-skills |
+| `web-perf`, `wrangler` | cloudflare/skills |
+| `safe-release` | evgenest/safe-release |
 
 ### MCP Servers
 

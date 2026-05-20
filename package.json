@@ -1,6 +1,6 @@
 {
   "name": "@evgenest/ai-agents-arsenal",
-  "version": "4.4.0",
+  "version": "4.5.0",
   "description": "Install AI agent skills and baseline MCP configs across supported tools.",
   "license": "MIT",
   "module": "index.ts",
