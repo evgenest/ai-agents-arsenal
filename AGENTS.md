@@ -20,12 +20,20 @@ This workflow uses GitHub Actions OIDC, so no `NPM_TOKEN` repository secret is r
 ### For each new release
 
 1. Update `package.json` and `CHANGELOG.md` to the new version.
-2. Push the version bump to `main`.
-3. Create a GitHub Release whose tag matches the package version, for example `v4.3.1`.
+2. Commit and push the version bump to `main`.
+3. Create a GitHub Release with the `--prerelease` flag — the tag must match the package version:
 
-When the release is published, GitHub Actions checks out that tag, uses a Node LTS runtime with a Trusted Publishing-compatible npm, runs `bun test` plus `bun run typecheck`, verifies that the tag matches `package.json`, and then runs `npm publish --provenance --access public` automatically via OIDC.
+```bash
+gh release create v<VERSION> --prerelease --title "v<VERSION> (beta)" --notes "..."
+```
 
-You do not need to run `npm publish` locally for normal releases once Trusted Publisher is configured on npm.
+The CI pipeline then runs automatically in three stages:
+
+- **`verify`** — always runs on pre-release and stable. Checks out the tag, verifies `package.json` version matches the tag, runs `bun test` and `bun run typecheck`.
+- **`auto-promote`** — runs after `verify` passes, only if the release is still a pre-release. Strips the beta note from the release body and promotes the release to stable (removes the pre-release flag). This triggers the `released` event automatically.
+- **`publish`** — runs after `verify` passes, only on stable releases. Publishes to npm via OIDC Trusted Publishing with provenance.
+
+You do not need to manually promote the release or run `npm publish` locally. If `verify` fails, the release stays as a pre-release and nothing is published.
 
 ## Architecture
 
