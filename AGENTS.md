@@ -27,11 +27,10 @@ This workflow uses GitHub Actions OIDC, so no `NPM_TOKEN` repository secret is r
 gh release create v<VERSION> --prerelease --title "v<VERSION> (beta)" --notes "..."
 ```
 
-The CI pipeline then runs automatically in three stages:
+The CI pipeline then runs automatically in two stages:
 
-- **`verify`** — always runs on pre-release and stable. Checks out the tag, verifies `package.json` version matches the tag, runs `bun test` and `bun run typecheck`.
+- **`verify`** — always runs. Checks out the tag, verifies `package.json` version matches the tag, runs `bun test` and `bun run typecheck`.
 - **`promote-and-publish`** — runs after `verify` passes, only when the release is a pre-release. Publishes to npm first, then strips the beta note from the release body and promotes the release to stable in one job. Promote and publish are combined because GitHub's `GITHUB_TOKEN` cannot trigger further workflow runs, so relying on a second `released` event would silently skip the npm publish.
-- **`publish`** — fallback that runs after `verify` passes on a stable release. Covers the case where a release is created directly as stable or promoted manually outside of CI.
 
 You do not need to manually promote the release or run `npm publish` locally. If `verify` fails, the release stays as a pre-release and nothing is published.
 

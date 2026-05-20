@@ -14,7 +14,7 @@ Changes since `v4.4.0`:
 - adds `web-perf` and `wrangler` from `cloudflare/skills` to the skills config
 - adds `safe-release` from `evgenest/safe-release` to the skills config
 - updates README skills table to reflect the three new entries
-- splits the publish workflow into dedicated jobs: `verify` (always runs on pre-release and stable), `promote-and-publish` (pre-release only: publishes to npm then promotes to stable in one step), and `publish` (fallback for releases created directly as stable)
+- replaces the single publish job with two jobs: `verify` (always runs) and `promote-and-publish` (pre-release only — publishes to npm then promotes to stable in one step)
 - combines promotion and npm publish into a single job to work around GitHub's recursive-trigger protection — `GITHUB_TOKEN` cannot fire a new workflow run, so relying on a second `released` event after auto-promotion would silently skip the npm publish
 - updates AGENTS.md release flow to document the fully automated pipeline
 
