@@ -4,7 +4,7 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
-## v4.5.0 - Cloudflare and safe-release skills
+## v4.5.0 - Cloudflare skills, safe-release, and automated CI promotion
 
 Release date: 2026-05-20
 
@@ -14,10 +14,14 @@ Changes since `v4.4.0`:
 - adds `web-perf` and `wrangler` from `cloudflare/skills` to the skills config
 - adds `safe-release` from `evgenest/safe-release` to the skills config
 - updates README skills table to reflect the three new entries
+- splits the publish workflow into two jobs: `verify` (always runs) and `publish` (stable only), so CI actually validates the tag and runs tests on pre-release instead of skipping the entire job
+- adds an `auto-promote` job that runs after `verify` passes on a pre-release — it strips the beta note from the release body, removes the pre-release flag, and marks the release as latest, which triggers the `released` event and the `publish` job automatically
+- updates AGENTS.md release flow to document the new fully automated pipeline
 
 Net effect:
 - the default install now includes Cloudflare Wrangler CLI guidance and web performance auditing out of the box
-- the safe GitHub release workflow (pre-release → promote to stable) is part of the standard skill set
+- the safe GitHub release workflow is part of the standard skill set
+- releasing requires only `gh release create --prerelease`; CI handles verification, promotion to stable, and npm publish without any manual steps
 
 ## v4.4.0 - Custom config inputs and setup preview
 
