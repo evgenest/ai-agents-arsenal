@@ -55,6 +55,7 @@ jobs:
       - name: Promote to stable release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ github.event.release.tag_name }}
         run: |
           body=$(gh release view "$TAG" --json body -q .body)
