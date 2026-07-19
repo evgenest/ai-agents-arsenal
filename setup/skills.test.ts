@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { stripAnsi } from "./skills";
+import { stripAnsi, extractErrorDetails } from "./skills";
 
 describe("stripAnsi", () => {
   test("removes standard colors and styles", () => {
@@ -15,5 +15,55 @@ describe("stripAnsi", () => {
   test("leaves plain text untouched", () => {
     const input = "This is some plain text.";
     expect(stripAnsi(input)).toBe("This is some plain text.");
+  });
+});
+
+describe("extractErrorDetails", () => {
+  test("skips the large skills logo and empty lines, preserving the real error output", () => {
+    const logoAndError = `
+███████╗██╗  ██╗██╗██╗     ██╗     ███████╗
+██╔════╝██║ ██╔╝██║██║     ██║     ██╔════╝
+███████╗█████╔╝ ██║██║     ██║     ███████╗
+╚════██║██╔═██╗ ██║██║     ██║     ╚════██║
+███████║██║  ██╗██║███████╗███████╗███████║
+╚══════╝╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚══════╝
+
+┌   skills
+│
+◇  Source: https://github.com/vercel-labs/next-skills.git
+│
+◇  Falling back to clone…
+│
+◇  Repository cloned
+│
+◇  No skills found
+│
+└  No valid skills found. Skills require a SKILL.md with name and description.
+`;
+
+    const expected = `┌   skills
+│
+◇  Source: https://github.com/vercel-labs/next-skills.git
+│
+◇  Falling back to clone…
+│
+◇  Repository cloned
+│
+◇  No skills found
+│
+└  No valid skills found. Skills require a SKILL.md with name and description.`;
+
+    expect(extractErrorDetails(logoAndError)).toBe(expected);
+  });
+
+  test("handles output without logo perfectly", () => {
+    const errorOnly = `Some other standard error message
+on multiple lines
+with some detail`;
+    expect(extractErrorDetails(errorOnly)).toBe(errorOnly);
+  });
+
+  test("handles empty string input", () => {
+    expect(extractErrorDetails("")).toBe("");
   });
 });

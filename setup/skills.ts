@@ -29,20 +29,22 @@ export async function setupSkills(
     } catch (err: unknown) {
       let details = "";
       if (err && typeof err === "object") {
-        const stderr = "stderr" in err && typeof err.stderr === "string" ? err.stderr : "";
-        const stdout = "stdout" in err && typeof err.stdout === "string" ? err.stdout : "";
+        const stderr = "stderr" in err && err.stderr ? String(err.stderr) : "";
+        const stdout = "stdout" in err && err.stdout ? String(err.stdout) : "";
 
-        const cleanStderr = stripAnsi(stderr).trim();
-        const cleanStdout = stripAnsi(stdout).trim();
+        const cleanStderr = extractErrorDetails(stderr);
+        const cleanStdout = extractErrorDetails(stdout);
 
-        if (cleanStderr) {
-          details = cleanStderr;
-        } else if (cleanStdout) {
-          const lines = cleanStdout.split("\n").map((l) => l.trim()).filter(Boolean);
-          if (lines.length > 0) {
-            const lastLines = lines.slice(-2).join("\n");
-            details = lastLines;
+        if (cleanStdout && cleanStderr) {
+          if (cleanStdout.includes(cleanStderr) || cleanStderr.includes(cleanStdout)) {
+            details = cleanStdout.length > cleanStderr.length ? cleanStdout : cleanStderr;
+          } else {
+            details = `${cleanStdout}\n\nStderr:\n${cleanStderr}`;
           }
+        } else if (cleanStdout) {
+          details = cleanStdout;
+        } else if (cleanStderr) {
+          details = cleanStderr;
         }
       }
       if (!details && err instanceof Error) {
@@ -84,24 +86,53 @@ export async function setupSkills(
   if (failures.length > 0) {
     console.log("├────────────────────────────────────────────────────────────");
     console.log(`│  ✗ Failures (${failures.length}):`);
-    for (const fail of failures) {
+    for (let i = 0; i < failures.length; i++) {
+      const fail = failures[i];
+      if (i > 0) {
+        console.log(`│`);
+        console.log(`│    ────────────────────────────────────────────────────────`);
+      }
       console.log(`│`);
       console.log(`│    • Repository: ${fail.repo}`);
       console.log(`│      Skills: ${fail.skills.join(", ")}`);
       console.log(`│      Reason:`);
       const errorLines = fail.error.split("\n");
       for (const line of errorLines) {
-        if (line.trim()) {
-          console.log(`│        ${line}`);
-        }
+        console.log(`│        ${line}`);
       }
     }
   }
   console.log("└────────────────────────────────────────────────────────────\n");
 }
-
 export function stripAnsi(str: string): string {
   return str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, "");
+}
+
+/**
+ * Strips ANSI codes, splits output into lines, and skips the leading ASCII logo
+ * to extract the actual error content.
+ */
+export function extractErrorDetails(output: string): string {
+  const clean = stripAnsi(output);
+  const lines = clean.split("\n");
+
+  let startIndex = 0;
+  // Skip leading empty lines or logo lines
+  while (startIndex < lines.length) {
+    const line = lines[startIndex];
+    if (line.trim() === "" || /^[ █╔═╝║╚╗\r]*$/.test(line)) {
+      startIndex++;
+    } else {
+      break;
+    }
+  }
+
+  if (startIndex >= lines.length) {
+    return clean.trim();
+  }
+
+  // Join back the remaining lines and trim trailing whitespace
+  return lines.slice(startIndex).join("\n").trimEnd();
 }
 
 /**
