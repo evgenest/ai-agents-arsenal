@@ -115,6 +115,10 @@ This repository-local pattern applies to skills. MCP configuration remains machi
 | `web-perf`, `wrangler` | cloudflare/skills |
 | `safe-release` | evgenest/safe-release |
 
+Skill files are installed via the [`skills`](https://www.npmjs.com/package/skills) npm package (`bunx skills add`), which stores every skill once in a canonical global location (`~/.agents/skills/`) and then symlinks it into each supported agent's skill directory.
+
+**Known symlink gap in `skills`:** the `skills` CLI only creates that symlink for the agent skill paths it has built in. Agents with a global skill directory outside that built-in list — for example `antigravity-cli` (`~/.gemini/antigravity-cli/skills/`) or `gemini-cli` (`~/.gemini/skills/`) — install without error but silently end up with no symlink, so the agent never sees the skill. This is the actual reason `ai-agents-arsenal` exists as its own package instead of being a thin wrapper around `bunx skills add`: after `skills` finishes, `setup/skills.ts` reads the `skillsPath` declared per agent in [`config/agents.config.ts`](config/agents.config.ts) and creates any missing symlink itself, pointing at `~/.agents/skills/<skill>`. It also detects and repairs stale symlinks (broken, or pointing at an old target) on every run.
+
 ### MCP Servers
 
 | Server | Transport | Purpose |

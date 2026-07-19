@@ -18,22 +18,90 @@ export async function setupSkills(
   const agentArgs = activeAgents.flatMap((a) => ["-a", a.id]);
   const globalFlag = scope === "global" ? ["-g"] : [];
 
+  const successfulSkills: string[] = [];
+  const failures: { repo: string; skills: string[]; error: string }[] = [];
+
   for (const entry of skillsConfig) {
     const skillArgs = entry.skills.flatMap((s) => ["--skill", s]);
-    await $`bunx skills add ${entry.repo} ${skillArgs} ${globalFlag} ${agentArgs} -y`;
+    try {
+      await $`bunx skills add ${entry.repo} ${skillArgs} ${globalFlag} ${agentArgs} -y`;
+      successfulSkills.push(...entry.skills);
+    } catch (err: unknown) {
+      let details = "";
+      if (err && typeof err === "object") {
+        const stderr = "stderr" in err && typeof err.stderr === "string" ? err.stderr : "";
+        const stdout = "stdout" in err && typeof err.stdout === "string" ? err.stdout : "";
+
+        const cleanStderr = stripAnsi(stderr).trim();
+        const cleanStdout = stripAnsi(stdout).trim();
+
+        if (cleanStderr) {
+          details = cleanStderr;
+        } else if (cleanStdout) {
+          const lines = cleanStdout.split("\n").map((l) => l.trim()).filter(Boolean);
+          if (lines.length > 0) {
+            const lastLines = lines.slice(-2).join("\n");
+            details = lastLines;
+          }
+        }
+      }
+      if (!details && err instanceof Error) {
+        details = err.message;
+      }
+      if (!details) {
+        details = String(err);
+      }
+      failures.push({
+        repo: entry.repo,
+        skills: entry.skills,
+        error: details,
+      });
+    }
   }
 
   // The skills CLI places global installs in ~/.agents/skills/ and creates
   // symlinks for most agents, but does NOT do so for agents with their own
   // skill directories (e.g. antigravity-cli → ~/.gemini/antigravity-cli/skills,
   // gemini-cli → ~/.gemini/skills). We create those symlinks ourselves.
-  if (scope === "global") {
+  if (scope === "global" && successfulSkills.length > 0) {
     const symlinkAgents = activeAgents.filter((a) => a.skillsPath != null);
     if (symlinkAgents.length > 0) {
-      const allSkillNames = skillsConfig.flatMap((e) => e.skills);
-      await createSkillSymlinks(symlinkAgents, allSkillNames);
+      await createSkillSymlinks(symlinkAgents, successfulSkills);
     }
   }
+
+  // Print final summary
+  console.log("\n┌────────────────────────────────────────────────────────────");
+  console.log("│  SKILLS INSTALLATION SUMMARY");
+  console.log("├────────────────────────────────────────────────────────────");
+  if (successfulSkills.length > 0) {
+    console.log(`│  ✓ Successful installs:`);
+    console.log(`│    ${successfulSkills.join(", ")}`);
+  } else {
+    console.log(`│  No skills were successfully installed.`);
+  }
+
+  if (failures.length > 0) {
+    console.log("├────────────────────────────────────────────────────────────");
+    console.log(`│  ✗ Failures (${failures.length}):`);
+    for (const fail of failures) {
+      console.log(`│`);
+      console.log(`│    • Repository: ${fail.repo}`);
+      console.log(`│      Skills: ${fail.skills.join(", ")}`);
+      console.log(`│      Reason:`);
+      const errorLines = fail.error.split("\n");
+      for (const line of errorLines) {
+        if (line.trim()) {
+          console.log(`│        ${line}`);
+        }
+      }
+    }
+  }
+  console.log("└────────────────────────────────────────────────────────────\n");
+}
+
+export function stripAnsi(str: string): string {
+  return str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, "");
 }
 
 /**
