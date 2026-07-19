@@ -89,7 +89,7 @@ Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each
 
 **`config/agents.config.ts`** — list of all supported agents with `enabled` boolean flags plus `mcpTargets`. The runtime loader derives `activeAgents` and `activeMcpTargets` from this array after loading either the default file or a user-provided override. Edit `enabled` here to include or exclude agents from all operations.
 
-Supported agent IDs: `claude-code`, `github-copilot`, `antigravity`, `cursor`, `windsurf`, `codex`, `gemini-cli`, `kilo`.
+Supported agent IDs: `claude-code`, `github-copilot`, `antigravity`, `antigravity-cli`, `cursor`, `windsurf`, `codex`, `gemini-cli`, `kilo`. Note: `antigravity` and `antigravity-cli` are treated as distinct agents with different global skill paths (`~/.gemini/antigravity/skills/` and `~/.gemini/antigravity-cli/skills/` respectively).
 
 **`config/skills.config.ts`** — array of `{ repo, skills[] }` objects. Each entry maps a GitHub repo to one or more skill names. The `bunx skills add` CLI resolves skills from these repos.
 

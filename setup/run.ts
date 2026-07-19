@@ -108,7 +108,7 @@ export async function runSetup(argv = process.argv.slice(2)) {
 
   printSetupPreview({ runSkills, runMcp, skillsInstallScope }, config);
 
-  if (runSkills) await setupSkills(config.activeAgents, config.skillsConfig, skillsInstallScope);
+  if (runSkills) await setupSkills(config.agentsConfig, config.skillsConfig, skillsInstallScope);
   if (runMcp) await setupMcp(config.activeMcpTargets, config.mcpServers);
 }
 

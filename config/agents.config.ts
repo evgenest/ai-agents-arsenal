@@ -9,14 +9,16 @@ export type McpTarget =
   | "kilo";
 
 export const agentsConfig = [
-  { id: "claude-code",    enabled: true,  mcpTargets: ["claude-code"] },
-  { id: "github-copilot", enabled: true,  mcpTargets: ["vscode"] },
-  { id: "antigravity",    enabled: true,  mcpTargets: ["antigravity"] },
-  { id: "cursor",         enabled: false, mcpTargets: ["cursor"] },
-  { id: "windsurf",       enabled: false, mcpTargets: ["windsurf"] },
-  { id: "codex",          enabled: false, mcpTargets: ["codex"] },
-  { id: "gemini-cli",     enabled: false, mcpTargets: ["gemini-cli"] },
-  { id: "kilo",           enabled: false, mcpTargets: ["kilo"] },
+  { id: "claude-code",     enabled: true,  mcpTargets: ["claude-code"], skillsPath: "~/.claude/skills" },
+  { id: "hermes-agent",    enabled: true,  mcpTargets: [], skillsPath: "~/.hermes/skills" },
+  { id: "antigravity-cli", enabled: true,  mcpTargets: ["antigravity"], skillsPath: "~/.gemini/antigravity-cli/skills" },
+  { id: "gemini-cli",      enabled: true,  mcpTargets: ["gemini-cli"], skillsPath: "~/.gemini/skills" },
+  { id: "github-copilot",  enabled: false, mcpTargets: ["vscode"] },
+  { id: "antigravity",     enabled: false, mcpTargets: ["antigravity"], skillsPath: "~/.gemini/antigravity/skills" },
+  { id: "cursor",          enabled: false, mcpTargets: ["cursor"] },
+  { id: "windsurf",        enabled: false, mcpTargets: ["windsurf"] },
+  { id: "codex",           enabled: false, mcpTargets: ["codex"] },
+  { id: "kilo",            enabled: false, mcpTargets: ["kilo"] },
 ] as const;
 
 export const activeAgents = agentsConfig

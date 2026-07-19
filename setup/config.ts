@@ -7,6 +7,7 @@ export type AgentConfigEntry = {
   id: string;
   enabled: boolean;
   mcpTargets: string[];
+  skillsPath?: string;
 };
 
 export type SkillsConfigEntry = {
@@ -164,7 +165,7 @@ function parseAgentsConfig(value: unknown, filePath: string): AgentConfigEntry[]
 
   return value.map((entry, index) => {
     const configEntry = expectObject(entry, `agentsConfig[${index}]`, filePath);
-    const { id, enabled, mcpTargets } = configEntry;
+    const { id, enabled, mcpTargets, skillsPath } = configEntry;
 
     if (typeof id !== "string" || id.length === 0) {
       throw new Error(`Expected agentsConfig[${index}].id in ${filePath} to be a non-empty string`);
@@ -175,8 +176,11 @@ function parseAgentsConfig(value: unknown, filePath: string): AgentConfigEntry[]
     if (!Array.isArray(mcpTargets) || mcpTargets.some((target) => typeof target !== "string" || target.length === 0)) {
       throw new Error(`Expected agentsConfig[${index}].mcpTargets in ${filePath} to be a string array`);
     }
+    if (skillsPath !== undefined && typeof skillsPath !== "string") {
+      throw new Error(`Expected agentsConfig[${index}].skillsPath in ${filePath} to be a string`);
+    }
 
-    return { id, enabled, mcpTargets: [...mcpTargets] };
+    return { id, enabled, mcpTargets: [...mcpTargets], skillsPath };
   });
 }
 
