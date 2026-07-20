@@ -1,4 +1,4 @@
-import { mkdir, readdir, symlink, unlink } from "node:fs/promises";
+import { mkdir, symlink, unlink } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { $ } from "bun";
@@ -6,8 +6,22 @@ import type { AgentConfigEntry, SkillsConfigEntry } from "./config";
 
 export type SkillsInstallScope = "global" | "project";
 
-/** Canonical storage used by the skills CLI for global installs. */
-const SKILLS_STORE = join(homedir(), ".agents", "skills");
+type Failure = { repo: string; skills: string[]; error: string };
+
+/**
+ * The agent whose own global skills directory doubles as our canonical
+ * store for global installs: Claude Code. Passing `-a claude-code` (and
+ * only `claude-code`) makes the `skills` CLI write a skill's real files
+ * directly into that one directory, with no intermediate `~/.agents/skills/`
+ * copy and no extra symlink layer — verified by inspection, not documented
+ * CLI behavior, so treat it as an implementation detail we depend on rather
+ * than a guarantee. We picked Claude Code over an arbitrary third-party
+ * agent (e.g. `cline`, whose own global path also happens to be a shared
+ * default `~/.agents/skills/`) because it's the one agent this toolkit can
+ * assume is always configured, and its path is under our own control via
+ * `agents.config.ts` rather than an upstream default we don't own.
+ */
+const CANONICAL_STORE_AGENT_ID = "claude-code";
 
 export async function setupSkills(
   agentsConfig: AgentConfigEntry[],
@@ -15,79 +29,185 @@ export async function setupSkills(
   scope: SkillsInstallScope = "global",
 ) {
   const activeAgents = agentsConfig.filter((a) => a.enabled);
-  const agentArgs = activeAgents.flatMap((a) => ["-a", a.id]);
-  const globalFlag = scope === "global" ? ["-g"] : [];
 
+  if (scope === "project") {
+    await setupProjectSkills(activeAgents, skillsConfig);
+    return;
+  }
+
+  await setupGlobalSkills(agentsConfig, activeAgents, skillsConfig);
+}
+
+/**
+ * Project-scope installs have no shared canonical store to reuse across
+ * agents, so we still delegate directly to the skills CLI's own `-a`
+ * targeting here, one agent directory per active agent.
+ */
+async function setupProjectSkills(activeAgents: AgentConfigEntry[], skillsConfig: SkillsConfigEntry[]) {
+  const agentArgs = activeAgents.flatMap((a) => ["-a", a.id]);
   const successfulSkills: string[] = [];
-  const failures: { repo: string; skills: string[]; error: string }[] = [];
+  const failures: Failure[] = [];
 
   for (const entry of skillsConfig) {
     const skillArgs = entry.skills.flatMap((s) => ["--skill", s]);
     try {
-      await $`bunx skills add ${entry.repo} ${skillArgs} ${globalFlag} ${agentArgs} -y`;
+      await $`bunx skills add ${entry.repo} ${skillArgs} ${agentArgs} -y`;
       successfulSkills.push(...entry.skills);
     } catch (err: unknown) {
-      let details = "";
-      if (err && typeof err === "object") {
-        const stderr = "stderr" in err && err.stderr ? String(err.stderr) : "";
-        const stdout = "stdout" in err && err.stdout ? String(err.stdout) : "";
-
-        const cleanStderr = extractErrorDetails(stderr);
-        const cleanStdout = extractErrorDetails(stdout);
-
-        if (cleanStdout && cleanStderr) {
-          if (cleanStdout.includes(cleanStderr) || cleanStderr.includes(cleanStdout)) {
-            details = cleanStdout.length > cleanStderr.length ? cleanStdout : cleanStderr;
-          } else {
-            details = `${cleanStdout}\n\nStderr:\n${cleanStderr}`;
-          }
-        } else if (cleanStdout) {
-          details = cleanStdout;
-        } else if (cleanStderr) {
-          details = cleanStderr;
-        }
-      }
-      if (!details && err instanceof Error) {
-        details = err.message;
-      }
-      if (!details) {
-        details = String(err);
-      }
-      failures.push({
-        repo: entry.repo,
-        skills: entry.skills,
-        error: details,
-      });
+      failures.push({ repo: entry.repo, skills: entry.skills, error: describeError(err) });
     }
   }
 
-  // The skills CLI places global installs in ~/.agents/skills/ and creates
-  // symlinks for most agents, but does NOT do so for agents with their own
-  // skill directories (e.g. antigravity-cli → ~/.gemini/antigravity-cli/skills,
-  // gemini-cli → ~/.gemini/skills). We create those symlinks ourselves.
-  if (scope === "global" && successfulSkills.length > 0) {
-    const symlinkAgents = activeAgents.filter((a) => a.skillsPath != null);
-    if (symlinkAgents.length > 0) {
-      await createSkillSymlinks(symlinkAgents, successfulSkills);
+  printSummary({ installed: successfulSkills, updated: [], failures, symlinkedAgents: [] });
+}
+
+/**
+ * Global-scope installs go straight to the canonical store — Claude Code's
+ * own global skills directory, see CANONICAL_STORE_AGENT_ID — without ever
+ * passing our active agents to the skills CLI's `-a` flag: skills already
+ * present are refreshed with `skills update` (fast, no repo re-clone),
+ * skills that are missing are added via `skills add ... -a claude-code`.
+ * We then create every *other* active agent's symlink into that store
+ * ourselves, from `skillsPath` in `agents.config.ts`.
+ */
+async function setupGlobalSkills(
+  agentsConfig: AgentConfigEntry[],
+  activeAgents: AgentConfigEntry[],
+  skillsConfig: SkillsConfigEntry[],
+) {
+  const canonicalAgent = agentsConfig.find((a) => a.id === CANONICAL_STORE_AGENT_ID);
+  if (!canonicalAgent?.skillsPath) {
+    throw new Error(
+      `agents.config.ts must define a "${CANONICAL_STORE_AGENT_ID}" entry with a skillsPath — `
+      + `its global skills directory doubles as the canonical store for all other agents' symlinks.`,
+    );
+  }
+  const skillsStore = resolveHome(canonicalAgent.skillsPath);
+
+  const installed = await listInstalledGlobalSkills();
+
+  const toUpdate: string[] = [];
+  const toAdd: SkillsConfigEntry[] = [];
+  for (const entry of skillsConfig) {
+    const missing = entry.skills.filter((s) => !installed.has(s));
+    const present = entry.skills.filter((s) => installed.has(s));
+    toUpdate.push(...present);
+    if (missing.length > 0) {
+      toAdd.push({ repo: entry.repo, skills: missing });
     }
   }
 
-  // Print final summary
+  const installedSkills: string[] = [];
+  const updatedSkills: string[] = [];
+  const failures: Failure[] = [];
+
+  for (const entry of toAdd) {
+    const skillArgs = entry.skills.flatMap((s) => ["--skill", s]);
+    try {
+      await $`bunx skills add ${entry.repo} ${skillArgs} -g -a ${CANONICAL_STORE_AGENT_ID} -y`;
+      installedSkills.push(...entry.skills);
+    } catch (err: unknown) {
+      failures.push({ repo: entry.repo, skills: entry.skills, error: describeError(err) });
+    }
+  }
+
+  if (toUpdate.length > 0) {
+    try {
+      await $`bunx skills update ${toUpdate} -g -y`;
+      updatedSkills.push(...toUpdate);
+    } catch (err: unknown) {
+      failures.push({ repo: "(update)", skills: toUpdate, error: describeError(err) });
+    }
+  }
+
+  const successfulSkills = [...installedSkills, ...updatedSkills];
+  const symlinkAgents = activeAgents.filter((a) => a.skillsPath != null && a.id !== CANONICAL_STORE_AGENT_ID);
+  if (symlinkAgents.length > 0 && successfulSkills.length > 0) {
+    await createSkillSymlinks(symlinkAgents, successfulSkills, skillsStore);
+  }
+
+  printSummary({
+    installed: installedSkills,
+    updated: updatedSkills,
+    failures,
+    symlinkedAgents: symlinkAgents.map((a) => a.id),
+  });
+}
+
+/** Global skill names already present in the canonical store (`skills list -g --json`). */
+async function listInstalledGlobalSkills(): Promise<Set<string>> {
+  try {
+    const result = await $`bunx skills list -g --json`.quiet();
+    const entries = JSON.parse(result.stdout.toString()) as { name: string }[];
+    return new Set(entries.map((e) => e.name));
+  } catch {
+    // Fall back to treating nothing as installed — everything goes through `add`.
+    return new Set();
+  }
+}
+
+function describeError(err: unknown): string {
+  let details = "";
+  if (err && typeof err === "object") {
+    const stderr = "stderr" in err && err.stderr ? String(err.stderr) : "";
+    const stdout = "stdout" in err && err.stdout ? String(err.stdout) : "";
+
+    const cleanStderr = extractErrorDetails(stderr);
+    const cleanStdout = extractErrorDetails(stdout);
+
+    if (cleanStdout && cleanStderr) {
+      if (cleanStdout.includes(cleanStderr) || cleanStderr.includes(cleanStdout)) {
+        details = cleanStdout.length > cleanStderr.length ? cleanStdout : cleanStderr;
+      } else {
+        details = `${cleanStdout}\n\nStderr:\n${cleanStderr}`;
+      }
+    } else if (cleanStdout) {
+      details = cleanStdout;
+    } else if (cleanStderr) {
+      details = cleanStderr;
+    }
+  }
+  if (!details && err instanceof Error) {
+    details = err.message;
+  }
+  if (!details) {
+    details = String(err);
+  }
+  return details;
+}
+
+function printSummary(summary: {
+  installed: string[];
+  updated: string[];
+  failures: Failure[];
+  symlinkedAgents: string[];
+}) {
+  const { installed, updated, failures, symlinkedAgents } = summary;
+
   console.log("\n┌────────────────────────────────────────────────────────────");
   console.log("│  SKILLS INSTALLATION SUMMARY");
   console.log("├────────────────────────────────────────────────────────────");
-  if (successfulSkills.length > 0) {
-    console.log(`│  ✓ Successful installs:`);
-    console.log(`│    ${successfulSkills.join(", ")}`);
-  } else {
-    console.log(`│  No skills were successfully installed.`);
+  if (installed.length > 0) {
+    console.log(`│  ✓ Installed:`);
+    console.log(`│    ${installed.join(", ")}`);
+  }
+  if (updated.length > 0) {
+    console.log(`│  ✓ Updated:`);
+    console.log(`│    ${updated.join(", ")}`);
+  }
+  if (installed.length === 0 && updated.length === 0) {
+    console.log(`│  No skills were successfully installed or updated.`);
+  }
+  if (symlinkedAgents.length > 0) {
+    console.log(`│  ✓ Symlinked agents:`);
+    console.log(`│    ${symlinkedAgents.join(", ")}`);
   }
 
   if (failures.length > 0) {
     console.log("├────────────────────────────────────────────────────────────");
     console.log(`│  ✗ Failures (${failures.length}):`);
     for (let i = 0; i < failures.length; i++) {
-      const fail = failures[i];
+      const fail = failures[i]!;
       if (i > 0) {
         console.log(`│`);
         console.log(`│    ────────────────────────────────────────────────────────`);
@@ -119,7 +239,7 @@ export function extractErrorDetails(output: string): string {
   let startIndex = 0;
   // Skip leading empty lines or logo lines
   while (startIndex < lines.length) {
-    const line = lines[startIndex];
+    const line = lines[startIndex]!;
     if (line.trim() === "" || /^[ █╔═╝║╚╗\r]*$/.test(line)) {
       startIndex++;
     } else {
@@ -137,7 +257,7 @@ export function extractErrorDetails(output: string): string {
 
 /**
  * For each agent that defines a `skillsPath`, create symlinks from that path
- * into the canonical skill store at ~/.agents/skills/<skill>.
+ * into the canonical skill store (Claude Code's own global skills directory).
  *
  * Existing symlinks pointing to the same target are left untouched.
  * Stale symlinks (broken or pointing elsewhere) are replaced.
@@ -145,6 +265,7 @@ export function extractErrorDetails(output: string): string {
 async function createSkillSymlinks(
   agents: AgentConfigEntry[],
   skillNames: string[],
+  skillsStore: string,
 ): Promise<void> {
   for (const agent of agents) {
     // skillsPath is guaranteed non-null here (filtered above)
@@ -153,7 +274,7 @@ async function createSkillSymlinks(
 
     for (const skillName of skillNames) {
       const linkPath = join(skillsDir, skillName);
-      const targetPath = join(SKILLS_STORE, skillName);
+      const targetPath = join(skillsStore, skillName);
       await ensureSymlink(linkPath, targetPath, agent.id, skillName);
     }
   }

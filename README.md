@@ -115,9 +115,17 @@ This repository-local pattern applies to skills. MCP configuration remains machi
 | `web-perf`, `wrangler` | cloudflare/skills |
 | `safe-release` | evgenest/safe-release |
 
-Skill files are installed via the [`skills`](https://www.npmjs.com/package/skills) npm package (`bunx skills add`), which stores every skill once in a canonical global location (`~/.agents/skills/`) and then symlinks it into each supported agent's skill directory.
+Global skill files are installed via the [`skills`](https://www.npmjs.com/package/skills) npm package (`bunx skills add` / `bunx skills update`). `ai-agents-arsenal` treats Claude Code's own global skills directory (`~/.claude/skills/`, from the `claude-code` entry in [`config/agents.config.ts`](config/agents.config.ts)) as the canonical store, and never delegates agent-specific symlinking to the `skills` CLI's own `-a` targeting — instead:
 
-**Known symlink gap in `skills`:** the `skills` CLI only creates that symlink for the agent skill paths it has built in. Agents with a global skill directory outside that built-in list — for example `antigravity-cli` (`~/.gemini/antigravity-cli/skills/`) or `gemini-cli` (`~/.gemini/skills/`) — install without error but silently end up with no symlink, so the agent never sees the skill. This is the actual reason `ai-agents-arsenal` exists as its own package instead of being a thin wrapper around `bunx skills add`: after `skills` finishes, `setup/skills.ts` reads the `skillsPath` declared per agent in [`config/agents.config.ts`](config/agents.config.ts) and creates any missing symlink itself, pointing at `~/.agents/skills/<skill>`. It also detects and repairs stale symlinks (broken, or pointing at an old target) on every run.
+- `setup/skills.ts` first lists already-installed global skills (`bunx skills list -g --json`). Skills already present are refreshed with `bunx skills update` (fast, no repo re-clone); only genuinely missing skills go through `bunx skills add ... -a claude-code`, which writes a skill's real files directly into `~/.claude/skills/<skill>` with no intermediate copy or extra symlink layer.
+- It then creates every *other* active agent's symlink into that same directory, from the `skillsPath` declared per agent in `config/agents.config.ts`, and detects and repairs stale symlinks (broken, or pointing at an old target) on every run.
+
+This is the actual reason `ai-agents-arsenal` exists as its own package instead of being a thin wrapper around `bunx skills add`:
+
+1. **Reliable symlinking.** The `skills` CLI's own agent auto-detection is unreliable in non-interactive/CI environments — passed `-a` targets can silently produce no symlink at all if the CLI doesn't detect that agent as installed, and passing none installs to every one of its 70+ supported agents. Owning symlink creation avoids both failure modes and keeps every run fast once skills are already installed.
+2. **One config, one command.** `skills add` only installs from a single repo per invocation. `config/skills.config.ts` lets you write down every skill you actually use, across as many source repos as you like, once — and install or update all of it with a single command instead of running `skills add` once per repository.
+
+Project-scope installs (`--project`) have no shared canonical store to reuse across agents, so those still delegate directly to the `skills` CLI's own per-agent `-a` targeting.
 
 ### MCP Servers
 
