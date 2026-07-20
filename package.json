@@ -33,6 +33,6 @@
   "homepage": "https://github.com/evgenest/ai-agents-arsenal#readme",
   "devDependencies": {
     "@types/bun": "latest",
-    "typescript": "^5"
+    "typescript": "^7"
   }
 }
