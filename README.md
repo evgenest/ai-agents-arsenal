@@ -130,7 +130,6 @@ This repository-local pattern applies to skills. MCP configuration remains machi
 | `resend-design-skills` | resend/design-skills |
 | `note-taking` | seb1n/awesome-ai-agent-skills |
 | `vercel-agent` | vercel-labs/vercel-plugin |
-| `githits-mcp` | evgenest/claude-dotfiles |
 
 Global skill files are installed via the [`skills`](https://www.npmjs.com/package/skills) npm package (`bunx skills add` / `bunx skills update`). `ai-agents-arsenal` treats Claude Code's own global skills directory (`~/.claude/skills/`, from the `claude-code` entry in [`config/agents.config.ts`](config/agents.config.ts)) as the canonical store, and never delegates agent-specific symlinking to the `skills` CLI's own `-a` targeting — instead:
 
@@ -240,6 +239,10 @@ For `npx`-based MCP servers, keep `"-y"` as the first argument so generated conf
 The built-in `exa` server follows this same pattern and sends `Authorization: Bearer ${EXA_API_KEY}`.
 
 If you rely on the built-in MCP config, the CLI preview also reminds you which environment variables are referenced and whether any `npx`-based servers need `"-y"` as the first argument.
+
+## Releasing
+
+Cutting a release (version bump, `README.md`/`AGENTS.md`/`CHANGELOG.md` updates, commit, push, and GitHub pre-release) used to be a handful of manual steps done one at a time. If you're working in Claude Code, the project ships a local slash command, `/release` (`.claude/commands/release.md`), that drives the whole flow for you — just run it and it bumps `package.json`, writes the `CHANGELOG.md` entry, updates the docs that actually changed, runs `bun test`/`bun run typecheck`, commits, pushes to `main`, and opens the `gh release create --prerelease` that CI picks up. See `AGENTS.md` → Release Flow for the full manual steps this command automates.
 
 ## Project Structure
 

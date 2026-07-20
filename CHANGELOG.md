@@ -4,6 +4,21 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v5.2.0 - `/release` slash command for the release flow
+
+Release date: 2026-07-20
+
+Tag: `v5.2.0`
+
+Changes since `v5.1.0`:
+- adds `.claude/commands/release.md`, a project-local Claude Code slash command that drives the full Release Flow (version bump, `CHANGELOG.md` entry, README/AGENTS doc updates, `bun test`/`bun run typecheck`, commit, push, and `gh release create --prerelease`) from a single `/release` invocation instead of the manual steps in `AGENTS.md` → Release Flow
+- `AGENTS.md` and `README.md`: document `/release` next to the existing manual Release Flow steps it automates
+- `config/skills.config.ts` / `README.md`: drop the `evgenest/claude-dotfiles` repo entry (private personal dotfiles repo, not a usable public source for the `githits-mcp` skill mapping)
+
+Net effect:
+- cutting a release from Claude Code is now one command instead of a multi-step manual sequence, reducing the chance of a step (doc update, CHANGELOG entry, or the pre-release call itself) being skipped
+- the skills table no longer references a private repo that other users of this project can't actually clone
+
 ## v5.1.0 - Dry-run flag, and config catch-up with what's actually installed
 
 Release date: 2026-07-20

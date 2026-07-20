@@ -146,8 +146,4 @@ export const skillsConfig = [
     repo: "vercel-labs/vercel-plugin",
     skills: ["vercel-agent"],
   },
-  {
-    repo: "evgenest/claude-dotfiles",
-    skills: ["githits-mcp"],
-  },
 ];

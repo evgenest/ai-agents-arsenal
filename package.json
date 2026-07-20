@@ -1,6 +1,6 @@
 {
   "name": "@evgenest/ai-agents-arsenal",
-  "version": "5.1.0",
+  "version": "5.2.0",
   "description": "Installs and keeps AI agent skills up to date (with commit pinning for edge cases) plus baseline MCP configs, across supported coding tools.",
   "license": "MIT",
   "module": "index.ts",
