@@ -43,39 +43,50 @@ export async function setupSkills(
 /**
  * Every command in this file runs the `skills` CLI through `bunx skills ...`.
  * `bunx` resolves a package that's already installed globally via bun
- * (`bun add -g skills`) directly, with no registry round-trip at all — but
- * it also never checks whether that global copy is outdated, so once
- * installed it can go stale indefinitely. `bun update -g skills` is a
- * one-time, best-effort check per invocation of this script that keeps it
- * fresh, run only when `skills` is already a global bun package — never as
- * a way to install it globally in the first place, since `bun update -g`
- * would happily do that too (confirmed by testing) if we didn't guard it.
+ * (`bun add -g skills`) directly, with no registry round-trip at all.
+ * Without a global install, every unpinned `bunx skills ...` call — and
+ * this file makes several per run (list, add, update, one per pinned
+ * project-scope agent) — re-resolves against the registry from scratch, so
+ * this function both installs `skills` globally on first use and, once
+ * it's there, keeps it current:
  *
- * Deliberately no `--latest`: that flag discards the semver range recorded
- * in `~/.bun/install/global/package.json` (`^x.y.z` by default) and jumps
- * straight to whatever npm's `latest` dist-tag currently points to, which
- * isn't necessarily a well-vetted release for every package. Plain
- * `bun update -g skills` stays within that already-accepted range — patch
- * and minor bumps only, no crossing a major version, and no prereleases
- * unless one was explicitly requested when the range was first set.
+ * - Not yet a global bun package → `bun add -g skills` (one-time; every
+ *   later `bunx skills` call in this and future runs then resolves
+ *   instantly, with no registry round-trip).
+ * - Already a global bun package → `bun update -g skills` (`bunx` never
+ *   checks this on its own, so it would otherwise go stale indefinitely).
+ *
+ * Deliberately no `--latest` on the update path: that flag discards the
+ * semver range recorded in `~/.bun/install/global/package.json` (`^x.y.z`
+ * by default) and jumps straight to whatever npm's `latest` dist-tag
+ * currently points to, which isn't necessarily a well-vetted release for
+ * every package. Plain `bun update -g skills` stays within that
+ * already-accepted range — patch and minor bumps only, no crossing a major
+ * version, and no prereleases unless one was explicitly requested when the
+ * range was first set. A fresh `bun add -g skills` has no prior range to
+ * respect, so it takes whatever the registry's own `latest` tag is, same as
+ * any other first-time install.
  */
 async function ensureGlobalSkillsCliFresh(): Promise<void> {
-  const packageJsonPath = await resolveGlobalSkillsPackageJson();
-  if (!packageJsonPath) {
-    return;
-  }
+  const existingPackageJsonPath = await resolveGlobalSkillsPackageJson();
 
   try {
-    await $`bun update -g skills`.quiet();
+    await $`bun ${existingPackageJsonPath ? "update" : "add"} -g skills`.quiet();
   } catch {
-    // Offline, registry hiccup, etc. — keep using whatever's already installed.
+    // Offline, registry hiccup, etc. — `bunx skills` still works below, just
+    // without the speed-up (or with whatever was already installed).
     return;
   }
 
-  const version = await readPackageVersion(packageJsonPath);
-  if (version) {
-    console.log(`  ✓ Global \`skills\` CLI is up to date (v${version})`);
+  const packageJsonPath = existingPackageJsonPath ?? await resolveGlobalSkillsPackageJson();
+  const version = packageJsonPath ? await readPackageVersion(packageJsonPath) : null;
+  if (!version) {
+    return;
   }
+
+  console.log(existingPackageJsonPath
+    ? `  ✓ Global \`skills\` CLI is up to date (v${version})`
+    : `  ✓ Installed \`skills\` CLI globally (v${version}) — future runs skip the registry round-trip`);
 }
 
 /** Path to the globally bun-installed `skills` package's package.json, or null if it isn't one. */
