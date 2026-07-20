@@ -17,11 +17,9 @@ Use this GitHub identity:
 
 This workflow uses GitHub Actions OIDC, so no `NPM_TOKEN` repository secret is required.
 
-Also run once per clone:
-```bash
-git config core.hooksPath .githooks
-```
-Wires up `.githooks/pre-commit` (a `bun` script, no extra dependency), which blocks any commit that changes `package.json`'s `version` without also staging a `CHANGELOG.md` update, and prints a non-blocking reminder when `setup/`, `config/`, or `index.ts` change without a version bump — to catch the "forgot to bump the version and write the changelog entry" case this Release Flow section depends on. This is a local git config setting, not tracked by git, so it doesn't propagate automatically to other clones or CI — each contributor runs it once.
+`bun install` in a clone of this repo also runs `git config core.hooksPath .githooks` automatically via the `prepare` script in `package.json` — no separate setup step needed. This wires up `.githooks/pre-commit` (a `bun` script, no extra dependency), which blocks any commit that changes `package.json`'s `version` without also staging a `CHANGELOG.md` update, and prints a non-blocking reminder when `setup/`, `config/`, or `index.ts` change without a version bump — to catch the "forgot to bump the version and write the changelog entry" case this Release Flow section depends on.
+
+`prepare` only runs for the package's own root install (a fresh clone, `bun install` with no args) or before publish — verified it does *not* run when `@evgenest/ai-agents-arsenal` is installed as a dependency or resolved via `bunx`, so it has no effect on end users of the published package. `core.hooksPath` itself is a local git config setting, not tracked by git, so each individual clone still needs its own `bun install` to pick it up — it just no longer requires a manual command.
 
 ### For each new release
 

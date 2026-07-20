@@ -17,7 +17,8 @@
   ],
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "publishConfig": {
     "access": "public",
