@@ -10,9 +10,24 @@ export type AgentConfigEntry = {
   skillsPath?: string;
 };
 
+export type SkillsPin = {
+  /** Commit SHA to fetch, since the `skills` CLI can't target a ref pinned this way. */
+  ref: string;
+  /** Path to the skill's directory within the repo at that commit. */
+  path: string;
+};
+
 export type SkillsConfigEntry = {
   repo: string;
   skills: string[];
+  /**
+   * Bypasses `bunx skills add` entirely and fetches this single skill from a
+   * pinned commit via a GitHub tarball instead. Only set this when the skill
+   * is unreachable through the `skills` CLI at the ref you need (see
+   * setup/skills.ts's installPinnedSkill for why `skills add` can't do this
+   * itself). Entries with `pin` must declare exactly one skill.
+   */
+  pin?: SkillsPin;
 };
 
 export type ConfigPathOverrides = {
@@ -191,7 +206,7 @@ function parseSkillsConfig(value: unknown, filePath: string): SkillsConfigEntry[
 
   return value.map((entry, index) => {
     const configEntry = expectObject(entry, `skillsConfig[${index}]`, filePath);
-    const { repo, skills } = configEntry;
+    const { repo, skills, pin } = configEntry;
 
     if (typeof repo !== "string" || repo.length === 0) {
       throw new Error(`Expected skillsConfig[${index}].repo in ${filePath} to be a non-empty string`);
@@ -200,7 +215,23 @@ function parseSkillsConfig(value: unknown, filePath: string): SkillsConfigEntry[
       throw new Error(`Expected skillsConfig[${index}].skills in ${filePath} to be a string array`);
     }
 
-    return { repo, skills: [...skills] };
+    if (pin === undefined) {
+      return { repo, skills: [...skills] };
+    }
+
+    const pinEntry = expectObject(pin, `skillsConfig[${index}].pin`, filePath);
+    const { ref, path } = pinEntry;
+    if (typeof ref !== "string" || ref.length === 0) {
+      throw new Error(`Expected skillsConfig[${index}].pin.ref in ${filePath} to be a non-empty string`);
+    }
+    if (typeof path !== "string" || path.length === 0) {
+      throw new Error(`Expected skillsConfig[${index}].pin.path in ${filePath} to be a non-empty string`);
+    }
+    if (skills.length !== 1) {
+      throw new Error(`Expected skillsConfig[${index}].skills in ${filePath} to declare exactly one skill when "pin" is set`);
+    }
+
+    return { repo, skills: [...skills], pin: { ref, path } };
   });
 }
 

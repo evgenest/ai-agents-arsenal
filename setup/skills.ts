@@ -1,8 +1,8 @@
-import { mkdir, symlink, unlink } from "node:fs/promises";
-import { homedir } from "node:os";
+import { cp, mkdir, mkdtemp, rm, stat, symlink, unlink } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { $ } from "bun";
-import type { AgentConfigEntry, SkillsConfigEntry } from "./config";
+import type { AgentConfigEntry, SkillsConfigEntry, SkillsPin } from "./config";
 
 export type SkillsInstallScope = "global" | "project";
 
@@ -40,8 +40,9 @@ export async function setupSkills(
 
 /**
  * Project-scope installs have no shared canonical store to reuse across
- * agents, so we still delegate directly to the skills CLI's own `-a`
- * targeting here, one agent directory per active agent.
+ * agents, so regular entries still delegate directly to the skills CLI's
+ * own `-a` targeting here, one `add` call covering every active agent.
+ * Pinned entries can't use that shortcut — see installPinnedSkillToProject.
  */
 async function setupProjectSkills(activeAgents: AgentConfigEntry[], skillsConfig: SkillsConfigEntry[]) {
   const agentArgs = activeAgents.flatMap((a) => ["-a", a.id]);
@@ -49,9 +50,13 @@ async function setupProjectSkills(activeAgents: AgentConfigEntry[], skillsConfig
   const failures: Failure[] = [];
 
   for (const entry of skillsConfig) {
-    const skillArgs = entry.skills.flatMap((s) => ["--skill", s]);
     try {
-      await $`bunx skills add ${entry.repo} ${skillArgs} ${agentArgs} -y`;
+      if (hasPin(entry)) {
+        await installPinnedSkillToProject(entry, activeAgents);
+      } else {
+        const skillArgs = entry.skills.flatMap((s) => ["--skill", s]);
+        await $`bunx skills add ${entry.repo} ${skillArgs} ${agentArgs} -y`;
+      }
       successfulSkills.push(...entry.skills);
     } catch (err: unknown) {
       failures.push({ repo: entry.repo, skills: entry.skills, error: describeError(err) });
@@ -84,11 +89,14 @@ async function setupGlobalSkills(
   }
   const skillsStore = resolveHome(canonicalAgent.skillsPath);
 
+  const pinnedEntries = skillsConfig.filter(hasPin);
+  const regularEntries = skillsConfig.filter((e) => e.pin == null);
+
   const installed = await listInstalledGlobalSkills();
 
   const toUpdate: string[] = [];
   const toAdd: SkillsConfigEntry[] = [];
-  for (const entry of skillsConfig) {
+  for (const entry of regularEntries) {
     const missing = entry.skills.filter((s) => !installed.has(s));
     const present = entry.skills.filter((s) => installed.has(s));
     toUpdate.push(...present);
@@ -99,6 +107,7 @@ async function setupGlobalSkills(
 
   const installedSkills: string[] = [];
   const updatedSkills: string[] = [];
+  const pinnedSkills: string[] = [];
   const failures: Failure[] = [];
 
   for (const entry of toAdd) {
@@ -120,7 +129,23 @@ async function setupGlobalSkills(
     }
   }
 
-  const successfulSkills = [...installedSkills, ...updatedSkills];
+  for (const entry of pinnedEntries) {
+    const skillName = entry.skills[0]!;
+    const targetDir = join(skillsStore, skillName);
+    try {
+      if (await pathExists(targetDir)) {
+        pinnedSkills.push(skillName);
+        continue;
+      }
+      await installPinnedSkill(entry, skillsStore);
+      console.log(`  ✓ [pinned] ${skillName} @ ${entry.pin.ref.slice(0, 12)} → ${targetDir}`);
+      pinnedSkills.push(skillName);
+    } catch (err: unknown) {
+      failures.push({ repo: entry.repo, skills: entry.skills, error: describeError(err) });
+    }
+  }
+
+  const successfulSkills = [...installedSkills, ...updatedSkills, ...pinnedSkills];
   const symlinkAgents = activeAgents.filter((a) => a.skillsPath != null && a.id !== CANONICAL_STORE_AGENT_ID);
   if (symlinkAgents.length > 0 && successfulSkills.length > 0) {
     await createSkillSymlinks(symlinkAgents, successfulSkills, skillsStore);
@@ -129,9 +154,97 @@ async function setupGlobalSkills(
   printSummary({
     installed: installedSkills,
     updated: updatedSkills,
+    pinned: pinnedSkills,
     failures,
     symlinkedAgents: symlinkAgents.map((a) => a.id),
   });
+}
+
+function hasPin(entry: SkillsConfigEntry): entry is SkillsConfigEntry & { pin: SkillsPin } {
+  return entry.pin != null;
+}
+
+/**
+ * Downloads a pinned commit's tarball and extracts it to a fresh temp dir,
+ * bypassing `bunx skills add` entirely. Returns the path to the skill's own
+ * subdirectory (contains SKILL.md at its root — a valid `skills add` local
+ * path source on its own) plus the temp root the caller must clean up.
+ *
+ * This exists because the `skills` CLI can't be pointed at an arbitrary
+ * commit for every repo: for repos it fast-paths (e.g. `vercel-labs/*`), it
+ * first tries fetching the packaged skill from Vercel's own hosted
+ * skills.sh download API by slug — which ignores our requested ref entirely
+ * and can simply not have the skill anymore — and only falls back to
+ * `git clone --branch <ref>` if that fails, which only ever resolves real
+ * branch/tag names, never a raw commit SHA. Fetching the tarball ourselves
+ * sidesteps both.
+ */
+async function fetchPinnedSkill(entry: SkillsConfigEntry & { pin: SkillsPin }): Promise<{ tmpRoot: string; skillDir: string }> {
+  const tarballUrl = `https://codeload.github.com/${entry.repo}/tar.gz/${entry.pin.ref}`;
+  const tmpRoot = await mkdtemp(join(tmpdir(), "ai-agents-arsenal-pin-"));
+  await $`curl -fsSL ${tarballUrl} | tar xz -C ${tmpRoot} --strip-components=1`;
+  return { tmpRoot, skillDir: join(tmpRoot, entry.pin.path) };
+}
+
+/** Global-scope pinned install: materializes straight into the canonical store. */
+async function installPinnedSkill(entry: SkillsConfigEntry & { pin: SkillsPin }, skillsStore: string): Promise<void> {
+  const skillName = entry.skills[0]!;
+  const targetDir = join(skillsStore, skillName);
+  const { tmpRoot, skillDir } = await fetchPinnedSkill(entry);
+
+  try {
+    await mkdir(skillsStore, { recursive: true });
+    await rm(targetDir, { recursive: true, force: true });
+    await cp(skillDir, targetDir, { recursive: true });
+  } finally {
+    await rm(tmpRoot, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Project-scope pinned install: hands the materialized skill to
+ * `bunx skills add <localDir>` so the CLI still owns each agent's own
+ * project-relative skill path (we don't maintain that table ourselves).
+ *
+ * Installs one agent at a time rather than passing every active agent in a
+ * single `-a a -a b` call. Verified by hand: for a *local path* source,
+ * this build of the `skills` CLI's pre-install plan lists every requested
+ * agent, but the post-install summary — and the filesystem — show only the
+ * first one actually got a symlink; the rest are silently dropped. Regular
+ * (non-pinned) entries don't hit this, since a remote repo source installs
+ * to every requested agent correctly.
+ */
+async function installPinnedSkillToProject(
+  entry: SkillsConfigEntry & { pin: SkillsPin },
+  activeAgents: AgentConfigEntry[],
+): Promise<void> {
+  const skillName = entry.skills[0]!;
+  const { tmpRoot, skillDir } = await fetchPinnedSkill(entry);
+
+  try {
+    const errors: string[] = [];
+    for (const agent of activeAgents) {
+      try {
+        await $`bunx skills add ${skillDir} --skill ${skillName} -a ${agent.id} -y`;
+      } catch (err: unknown) {
+        errors.push(`[${agent.id}] ${describeError(err)}`);
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error(errors.join("\n\n"));
+    }
+  } finally {
+    await rm(tmpRoot, { recursive: true, force: true });
+  }
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Global skill names already present in the canonical store (`skills list -g --json`). */
@@ -179,10 +292,12 @@ function describeError(err: unknown): string {
 function printSummary(summary: {
   installed: string[];
   updated: string[];
+  pinned?: string[];
   failures: Failure[];
   symlinkedAgents: string[];
 }) {
   const { installed, updated, failures, symlinkedAgents } = summary;
+  const pinned = summary.pinned ?? [];
 
   console.log("\n┌────────────────────────────────────────────────────────────");
   console.log("│  SKILLS INSTALLATION SUMMARY");
@@ -195,7 +310,11 @@ function printSummary(summary: {
     console.log(`│  ✓ Updated:`);
     console.log(`│    ${updated.join(", ")}`);
   }
-  if (installed.length === 0 && updated.length === 0) {
+  if (pinned.length > 0) {
+    console.log(`│  ✓ Pinned (fetched from a fixed commit, not \`skills add\`):`);
+    console.log(`│    ${pinned.join(", ")}`);
+  }
+  if (installed.length === 0 && updated.length === 0 && pinned.length === 0) {
     console.log(`│  No skills were successfully installed or updated.`);
   }
   if (symlinkedAgents.length > 0) {

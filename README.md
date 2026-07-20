@@ -109,7 +109,7 @@ This repository-local pattern applies to skills. MCP configuration remains machi
 | `create-agentsmd`, `git-commit`, `prd` | github/awesome-copilot |
 | `find-skills` | vercel-labs/skills |
 | `frontend-design`, `skill-creator` | anthropics/skills |
-| `next-best-practices` | vercel-labs/next-skills |
+| `next-best-practices` | vercel-labs/next-skills, pinned to [a commit](https://github.com/vercel-labs/next-skills/tree/dc1de9caf7612d73f56a8dec3cb1bd6c9ec096b9/skills/next-best-practices) — see below |
 | `shadcn` | shadcn/ui |
 | `vercel-composition-patterns`, `vercel-react-best-practices`, `web-design-guidelines` | vercel-labs/agent-skills |
 | `web-perf`, `wrangler` | cloudflare/skills |
@@ -124,8 +124,9 @@ This is the actual reason `ai-agents-arsenal` exists as its own package instead 
 
 1. **Reliable symlinking.** The `skills` CLI's own agent auto-detection is unreliable in non-interactive/CI environments — passed `-a` targets can silently produce no symlink at all if the CLI doesn't detect that agent as installed, and passing none installs to every one of its 70+ supported agents. Owning symlink creation avoids both failure modes and keeps every run fast once skills are already installed.
 2. **One config, one command.** `skills add` only installs from a single repo per invocation. `config/skills.config.ts` lets you write down every skill you actually use, across as many source repos as you like, once — and install or update all of it with a single command instead of running `skills add` once per repository.
+3. **Pinning a skill to a fixed commit.** Sometimes a skill disappears from a repo's default branch before its replacement ships (e.g. `next-best-practices` in `vercel-labs/next-skills`, being folded into Next.js core itself starting at v16.3.0 — not yet released). The `skills` CLI can't be pointed at an arbitrary commit to work around that for every repo: for fast-pathed owners like `vercel-labs` it fetches the packaged skill from Vercel's own hosted download API by slug — which ignores any ref you pass — and only falls back to `git clone --branch <ref>`, which only resolves real branch/tag names, never a raw SHA. `config/skills.config.ts` entries can set an optional `pin: { ref, path }` so that one entry bypasses `skills add` entirely and is fetched straight from that commit's GitHub tarball instead, then installed the same way as everything else.
 
-Project-scope installs (`--project`) have no shared canonical store to reuse across agents, so those still delegate directly to the `skills` CLI's own per-agent `-a` targeting.
+Project-scope installs (`--project`) have no shared canonical store to reuse across agents, so regular entries still delegate directly to the `skills` CLI's own per-agent `-a` targeting. Pinned entries can't reuse that either — a *local path* source (which a pinned commit's extracted tarball is) only reliably installs to the first `-a` target passed to a single `skills add` call in this CLI, so `setup/skills.ts` installs pinned skills to each active agent's project directory one `skills add` call at a time instead.
 
 ### MCP Servers
 
