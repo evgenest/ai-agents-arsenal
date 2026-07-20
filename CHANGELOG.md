@@ -4,6 +4,18 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v5.0.1 - Pre-commit reminder for the release step
+
+Release date: 2026-07-20
+
+Tag: `v5.0.1`
+
+Changes since `v5.0.0`:
+- extends `.githooks/pre-commit` so a version bump that passes the existing CHANGELOG check now also prints a non-blocking reminder of the remaining Release Flow step — push to `main`, then `gh release create v<version> --prerelease --title "v<version> (beta)" --notes "..."` — so CI picks up the pre-release and publishes it to npm
+
+Net effect:
+- the pre-commit hook already caught "bumped the version but forgot the CHANGELOG"; it now also nudges toward the next step so a version bump doesn't get committed and pushed without a matching GitHub pre-release ever being created
+
 ## v5.0.0 - Own global skill installation, commit pinning, and CLI freshness
 
 Release date: 2026-07-20

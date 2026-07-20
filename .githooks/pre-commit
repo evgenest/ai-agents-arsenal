@@ -27,6 +27,13 @@ if (versionBumped && !stagedFiles.includes("CHANGELOG.md")) {
   process.exit(1);
 }
 
+if (versionBumped) {
+  console.error(`ℹ pre-commit reminder: package.json version bumped to ${newVersion}.`);
+  console.error(`  After this commit: push to main, then run`);
+  console.error(`  gh release create v${newVersion} --prerelease --title "v${newVersion} (beta)" --notes "..."`);
+  console.error(`  so CI picks it up and publishes to npm (see AGENTS.md → Release Flow).`);
+}
+
 const functionalChange = stagedFiles.some(
   (f) => f.startsWith("setup/") || f.startsWith("config/") || f === "index.ts",
 );
