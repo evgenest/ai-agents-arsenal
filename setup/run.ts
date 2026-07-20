@@ -4,10 +4,14 @@ import { printSetupPreview } from "./preflight";
 import { setupSkills, type SkillsInstallScope } from "./skills";
 
 export type SetupSelection = {
+  // Which phases were requested — drives what printSetupPreview shows, not
+  // whether anything actually runs. That's dryRun's job, checked separately
+  // in runSetup after the preview is printed.
   runSkills: boolean;
   runMcp: boolean;
   skillsInstallScope: SkillsInstallScope;
   configPaths: ConfigPathOverrides;
+  dryRun: boolean;
 };
 
 function printUsage() {
@@ -20,6 +24,7 @@ With no phase flags, both skills and MCP setup run.
   --skills  Run only skill installation
   --mcp     Run only MCP setup
   --project Install skills into the current project instead of globally
+  --dry-run Print the setup preview and exit without making changes
   --agents-config Override config/agents.config.ts with a custom file
   --skills-config Override config/skills.config.ts with a custom file
   --mcp-config Override config/mcp.config.ts with a custom file
@@ -30,6 +35,7 @@ export function resolveSetupSelection(args: string[]): SetupSelection {
   let runSkills = false;
   let runMcp = false;
   let skillsInstallScope: SkillsInstallScope = "global";
+  let dryRun = false;
   const configPaths: ConfigPathOverrides = {};
 
   for (let index = 0; index < args.length; index += 1) {
@@ -47,6 +53,11 @@ export function resolveSetupSelection(args: string[]): SetupSelection {
 
     if (arg === "--project") {
       skillsInstallScope = "project";
+      continue;
+    }
+
+    if (arg === "--dry-run") {
+      dryRun = true;
       continue;
     }
 
@@ -91,10 +102,10 @@ export function resolveSetupSelection(args: string[]): SetupSelection {
   }
 
   if (!runSkills && !runMcp) {
-    return { runSkills: true, runMcp: true, skillsInstallScope, configPaths };
+    return { runSkills: true, runMcp: true, skillsInstallScope, configPaths, dryRun };
   }
 
-  return { runSkills, runMcp, skillsInstallScope, configPaths };
+  return { runSkills, runMcp, skillsInstallScope, configPaths, dryRun };
 }
 
 export async function runSetup(argv = process.argv.slice(2)) {
@@ -103,10 +114,15 @@ export async function runSetup(argv = process.argv.slice(2)) {
     return;
   }
 
-  const { runSkills, runMcp, skillsInstallScope, configPaths } = resolveSetupSelection(argv);
+  const { runSkills, runMcp, skillsInstallScope, configPaths, dryRun } = resolveSetupSelection(argv);
   const config = await loadSetupConfig(configPaths);
 
   printSetupPreview({ runSkills, runMcp, skillsInstallScope }, config);
+
+  if (dryRun) {
+    console.log("\nDry run: no changes made.");
+    return;
+  }
 
   if (runSkills) await setupSkills(config.agentsConfig, config.skillsConfig, skillsInstallScope);
   if (runMcp) await setupMcp(config.activeMcpTargets, config.mcpServers);

@@ -5,7 +5,21 @@ export const skillsConfig = [
   },
   {
     repo: "obra/superpowers",
-    skills: ["brainstorming"],
+    skills: [
+      "brainstorming",
+      "dispatching-parallel-agents",
+      "executing-plans",
+      "finishing-a-development-branch",
+      "receiving-code-review",
+      "requesting-code-review",
+      "subagent-driven-development",
+      "systematic-debugging",
+      "test-driven-development",
+      "using-superpowers",
+      "verification-before-completion",
+      "writing-plans",
+      "writing-skills",
+    ],
   },
   {
     repo: "github/awesome-copilot",
@@ -48,10 +62,92 @@ export const skillsConfig = [
   },
   {
     repo: "cloudflare/skills",
-    skills: ["web-perf", "wrangler"],
+    skills: [
+      "agents-sdk",
+      "cloudflare-email-service",
+      "durable-objects",
+      "sandbox-sdk",
+      "turnstile-spin",
+      "web-perf",
+      "workers-best-practices",
+      "wrangler",
+    ],
   },
   {
     repo: "evgenest/safe-release",
     skills: ["safe-release"],
+  },
+  {
+    repo: "vercel/ai-elements",
+    skills: ["ai-elements"],
+  },
+  {
+    repo: "vercel/ai",
+    skills: ["ai-sdk", "migrate-ai-sdk-v6-to-v7"],
+  },
+  {
+    repo: "better-auth/skills",
+    skills: [
+      "better-auth-best-practices",
+      "create-auth",
+      "email-and-password-best-practices",
+      "organization-best-practices",
+      "two-factor-authentication-best-practices",
+    ],
+  },
+  {
+    repo: "vercel/chat",
+    skills: ["chat-sdk"],
+  },
+  {
+    repo: "stablyai/orca",
+    skills: ["computer-use"],
+  },
+  {
+    repo: "upstash/context7",
+    skills: ["context7-mcp"],
+  },
+  {
+    repo: "get-convex/agent-skills",
+    skills: [
+      "convex",
+      "convex-create-component",
+      "convex-migration-helper",
+      "convex-performance-audit",
+      "convex-quickstart",
+      "convex-setup-auth",
+    ],
+  },
+  {
+    repo: "nexu-io/open-design",
+    skills: ["creative-director"],
+  },
+  {
+    repo: "nousresearch/hermes-agent",
+    skills: ["dogfood"],
+  },
+  {
+    repo: "resend/email-best-practices",
+    skills: ["email-best-practices"],
+  },
+  {
+    repo: "resend/react-email",
+    skills: ["react-email"],
+  },
+  {
+    repo: "resend/design-skills",
+    skills: ["resend-design-skills"],
+  },
+  {
+    repo: "seb1n/awesome-ai-agent-skills",
+    skills: ["note-taking"],
+  },
+  {
+    repo: "vercel-labs/vercel-plugin",
+    skills: ["vercel-agent"],
+  },
+  {
+    repo: "evgenest/claude-dotfiles",
+    skills: ["githits-mcp"],
   },
 ];

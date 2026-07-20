@@ -8,6 +8,7 @@ describe("resolveSetupSelection", () => {
       runMcp: true,
       skillsInstallScope: "global",
       configPaths: {},
+      dryRun: false,
     });
   });
 
@@ -17,6 +18,7 @@ describe("resolveSetupSelection", () => {
       runMcp: false,
       skillsInstallScope: "project",
       configPaths: {},
+      dryRun: false,
     });
   });
 
@@ -34,6 +36,19 @@ describe("resolveSetupSelection", () => {
         agentsConfigPath: "./configs/agents.local.ts",
         mcpConfigPath: "./configs/mcp.local.ts",
       },
+      dryRun: false,
+    });
+  });
+
+  test("supports --dry-run", () => {
+    // runSkills/runMcp stay true here (both phases selected for preview) —
+    // dryRun is the separate flag that stops runSetup from acting on them.
+    expect(resolveSetupSelection(["--dry-run"])).toEqual({
+      runSkills: true,
+      runMcp: true,
+      skillsInstallScope: "global",
+      configPaths: {},
+      dryRun: true,
     });
   });
 

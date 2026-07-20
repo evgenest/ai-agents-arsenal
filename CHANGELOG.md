@@ -4,6 +4,22 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v5.1.0 - Dry-run flag, and config catch-up with what's actually installed
+
+Release date: 2026-07-20
+
+Tag: `v5.1.0`
+
+Changes since `v5.0.1`:
+- adds a `--dry-run` flag to `setup/run.ts`: prints the usual `printSetupPreview` output, then returns before `setupSkills`/`setupMcp` are called, so nothing is written — previously the preview was informational only and every run applied changes unconditionally
+- expands `config/skills.config.ts` from 10 to 25 repo entries (15 skills to 61 skills): most of the added skills were already present on disk (installed at some point outside this config, per `~/.agents/.skill-lock.json` provenance), so this brings the config back in sync with reality rather than installing anything new — notably extends the existing `obra/superpowers` entry with 12 more skills and `cloudflare/skills` with 6 more
+- trims `config/agents.config.ts` down to the agents actually in use: removes the disabled entries for `gemini-cli`, `github-copilot`, `antigravity`, `windsurf`, `codex`, and `kilo`; re-adds `hermes-agent` (kept `enabled: false`) and adds `cursor` (`enabled: true`, `~/.cursor/skills`)
+- updates the README `What Gets Installed → Skills` table and the `--dry-run` flag docs in both README.md and AGENTS.md to match
+
+Net effect:
+- a plain `bun run index.ts --dry-run` now gives a true no-op preview, closing the gap between "shows a preview" and "asks for confirmation before acting" that the preview text implied but the code never enforced
+- `config/skills.config.ts` is now the actual source of truth for every skill this machine has installed through `ai-agents-arsenal`, instead of describing a subset of it
+
 ## v5.0.1 - Pre-commit reminder for the release step
 
 Release date: 2026-07-20

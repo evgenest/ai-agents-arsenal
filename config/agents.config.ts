@@ -14,15 +14,9 @@ export type McpTarget =
 // the `skills` CLI's own `-a` agent targeting — see setup/skills.ts.
 export const agentsConfig = [
   { id: "claude-code",     enabled: true,  mcpTargets: ["claude-code"], skillsPath: "~/.claude/skills" },
-  { id: "hermes-agent",    enabled: true,  mcpTargets: [], skillsPath: "~/.hermes/skills" },
+  { id: "hermes-agent",    enabled: false, mcpTargets: [], skillsPath: "~/.hermes/skills" },
   { id: "antigravity-cli", enabled: true,  mcpTargets: ["antigravity"], skillsPath: "~/.gemini/antigravity-cli/skills" },
-  { id: "gemini-cli",      enabled: true,  mcpTargets: ["gemini-cli"], skillsPath: "~/.gemini/skills" },
-  { id: "github-copilot",  enabled: false, mcpTargets: ["vscode"], skillsPath: "~/.copilot/skills" },
-  { id: "antigravity",     enabled: false, mcpTargets: ["antigravity"], skillsPath: "~/.gemini/antigravity/skills" },
-  { id: "cursor",          enabled: false, mcpTargets: ["cursor"], skillsPath: "~/.cursor/skills" },
-  { id: "windsurf",        enabled: false, mcpTargets: ["windsurf"], skillsPath: "~/.codeium/windsurf/skills" },
-  { id: "codex",           enabled: false, mcpTargets: ["codex"], skillsPath: "~/.codex/skills" },
-  { id: "kilo",            enabled: false, mcpTargets: ["kilo"], skillsPath: "~/.kilocode/skills" },
+  { id: "cursor",          enabled: true,  mcpTargets: ["cursor"], skillsPath: "~/.cursor/skills" },
 ] as const;
 
 export const activeAgents = agentsConfig

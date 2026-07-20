@@ -107,15 +107,30 @@ This repository-local pattern applies to skills. MCP configuration remains machi
 | Skill | Source repo |
 |---|---|
 | `better-icons` | better-auth/better-icons |
-| `brainstorming` | obra/superpowers |
+| `brainstorming`, `dispatching-parallel-agents`, `executing-plans`, `finishing-a-development-branch`, `receiving-code-review`, `requesting-code-review`, `subagent-driven-development`, `systematic-debugging`, `test-driven-development`, `using-superpowers`, `verification-before-completion`, `writing-plans`, `writing-skills` | obra/superpowers |
 | `create-agentsmd`, `git-commit`, `prd` | github/awesome-copilot |
 | `find-skills` | vercel-labs/skills |
 | `frontend-design`, `skill-creator` | anthropics/skills |
 | `next-best-practices` | vercel-labs/next-skills, pinned to [a commit](https://github.com/vercel-labs/next-skills/tree/dc1de9caf7612d73f56a8dec3cb1bd6c9ec096b9/skills/next-best-practices) — see below |
 | `shadcn` | shadcn/ui |
 | `vercel-composition-patterns`, `vercel-react-best-practices`, `web-design-guidelines` | vercel-labs/agent-skills |
-| `web-perf`, `wrangler` | cloudflare/skills |
+| `agents-sdk`, `cloudflare-email-service`, `durable-objects`, `sandbox-sdk`, `turnstile-spin`, `web-perf`, `workers-best-practices`, `wrangler` | cloudflare/skills |
 | `safe-release` | evgenest/safe-release |
+| `ai-elements` | vercel/ai-elements |
+| `ai-sdk`, `migrate-ai-sdk-v6-to-v7` | vercel/ai |
+| `better-auth-best-practices`, `create-auth`, `email-and-password-best-practices`, `organization-best-practices`, `two-factor-authentication-best-practices` | better-auth/skills |
+| `chat-sdk` | vercel/chat |
+| `computer-use` | stablyai/orca |
+| `context7-mcp` | upstash/context7 |
+| `convex`, `convex-create-component`, `convex-migration-helper`, `convex-performance-audit`, `convex-quickstart`, `convex-setup-auth` | get-convex/agent-skills |
+| `creative-director` | nexu-io/open-design |
+| `dogfood` | nousresearch/hermes-agent |
+| `email-best-practices` | resend/email-best-practices |
+| `react-email` | resend/react-email |
+| `resend-design-skills` | resend/design-skills |
+| `note-taking` | seb1n/awesome-ai-agent-skills |
+| `vercel-agent` | vercel-labs/vercel-plugin |
+| `githits-mcp` | evgenest/claude-dotfiles |
 
 Global skill files are installed via the [`skills`](https://www.npmjs.com/package/skills) npm package (`bunx skills add` / `bunx skills update`). `ai-agents-arsenal` treats Claude Code's own global skills directory (`~/.claude/skills/`, from the `claude-code` entry in [`config/agents.config.ts`](config/agents.config.ts)) as the canonical store, and never delegates agent-specific symlinking to the `skills` CLI's own `-a` targeting — instead:
 
@@ -171,6 +186,7 @@ You can also choose which setup phase to run without changing agent config:
 - `bun run index.ts --skills` runs only skill installation
 - `bun run index.ts --mcp` runs only MCP config generation
 - `bun run index.ts --skills --project` installs skills into the current project instead of using `-g`
+- `bun run index.ts --dry-run` prints the setup preview and exits without making changes
 - `bun run index.ts --agents-config ./my-config/agents.config.ts --skills-config ./my-config/skills.config.ts` installs skills from custom config files
 - `bun run index.ts --agents-config ./my-config/agents.config.ts --mcp-config ./my-config/mcp.config.ts` writes MCP config from custom config files
 

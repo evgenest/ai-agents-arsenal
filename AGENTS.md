@@ -58,7 +58,7 @@ index.ts          →  setup/run.ts      →  setup/skills.ts   →  config/agen
 
 ### Setup Layer (`setup/`)
 
-**`setup/run.ts`** — exports `runSetup()`. Parses CLI flags and chooses which setup phases to run. Supported flags: `--skills`, `--mcp`, `--project`, `--agents-config`, `--skills-config`, `--mcp-config`, and `--help`. With no phase flags, it runs both skills and MCP setup. Before applying changes it prints a phase-specific preview of the loaded setup.
+**`setup/run.ts`** — exports `runSetup()`. Parses CLI flags and chooses which setup phases to run. Supported flags: `--skills`, `--mcp`, `--project`, `--dry-run`, `--agents-config`, `--skills-config`, `--mcp-config`, and `--help`. With no phase flags, it runs both skills and MCP setup. Before applying changes it prints a phase-specific preview of the loaded setup; `--dry-run` stops right after that preview and skips `setupSkills`/`setupMcp` entirely.
 
 **`setup/config.ts`** — runtime config loader. Resolves default versus user-provided config paths, imports config modules dynamically, validates their exports, and derives `activeAgents` plus `activeMcpTargets` from the loaded agent config.
 
