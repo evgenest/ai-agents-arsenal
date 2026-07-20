@@ -4,6 +4,33 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v5.0.0 - Own global skill installation, commit pinning, and CLI freshness
+
+Release date: 2026-07-20
+
+Tag: `v5.0.0`
+
+Changes since `v4.5.0`:
+- reworks global skill installation to stop delegating agent targeting (`-a`) to the upstream `skills` CLI: `claude-code`'s real files at `~/.claude/skills/<skill>` are now the single canonical store, and symlinks for every other active agent are created and repaired by ai-agents-arsenal itself
+- adds `skillsPath` to every entry in `config/agents.config.ts`, including previously disabled agents (`github-copilot`, `cursor`, `windsurf`, `codex`, `kilo`), so enabling skill installation for them is a one-line config change
+- speeds up repeat global installs by checking what's already installed via `skills list -g --json` and updating those in one batched `skills update` call instead of re-cloning every repo through `skills add` (~18s → ~2s across the full 15-skill set in testing)
+- adds a `pin: { ref, path }` option to `SkillsConfigEntry` so a single skill can be locked to an exact commit SHA, for cases where the upstream `skills add` can't resolve the needed version (e.g. `vercel-labs/next-skills`, which prefers a packaged slug lookup over the passed ref and only falls back to `git clone --branch`, which doesn't accept a bare SHA); pinned skills are fetched as a GitHub commit tarball instead
+- adds `ensureGlobalSkillsCliFresh()`, run once at the start of every setup: installs the `skills` CLI globally via `bun add -g skills` if it's missing, or updates it via `bun update -g skills` (without `--latest`, so it stays within the semver range accepted at first install) if it's already present — avoids every `bunx skills` call in a run silently resolving against a stale globally-cached version
+- adds graceful failure handling for skill installation: failures are collected and printed as a clean summary instead of surfacing raw CLI output, with improved parsing of the `skills` CLI's stderr/stdout (Buffer decoding, ASCII logo stripped, duplicate output merged, multiple failures separated by a divider)
+- adds a `.githooks/pre-commit` hook (plain `bun` script, no Husky) that blocks a commit if `package.json`'s `version` changes without a matching staged `CHANGELOG.md` update, and prints a non-blocking reminder when `setup/`, `config/`, or `index.ts` change without a version bump
+- adds a `prepare` script (`git config core.hooksPath .githooks 2>/dev/null || true`) so `bun install` wires up the pre-commit hook automatically for anyone cloning the repo, instead of requiring a manual one-time command; the `|| true` keeps `bun install` from failing outside a git checkout, and the hook has no effect on consumers who install the published package or run it via `bunx`
+- upgrades `typescript` from `^5` to `^7`, the actual next major (the native Go-based compiler; `6.0.0-beta` was abandoned in favor of a direct jump to 7) — `tsc --noEmit` dropped from 1.77s to 0.29s on this project with no code or `tsconfig.json` changes needed
+- combines the CI `promote-and-publish` job further and removes the now-dead standalone `publish` fallback job, since releases are always created as pre-releases
+- removes `.claude/settings.local.json` from git tracking and adds it to `.gitignore` (it holds personal, non-shared permission overrides that had been committed by mistake)
+- expands the `package.json` description to mention skill updates and commit pinning, not just installation
+
+Net effect:
+- global skill installation no longer depends on the upstream `skills` CLI's own agent-detection or symlinking behavior, which was unreliable in non-interactive/CI environments — ai-agents-arsenal now fully owns which agents get which skills
+- a skill can be pinned to a fixed commit when its upstream default branch temporarily stops providing a working copy, without blocking or erroring the rest of the install
+- repeat global installs are meaningfully faster, and the `skills` CLI itself no longer silently goes stale between runs
+- a version bump without a corresponding `CHANGELOG.md` entry is now caught locally at commit time instead of surfacing at release time
+- `bun run typecheck` is roughly 6x faster locally and in CI
+
 ## v4.5.0 - Cloudflare skills, safe-release, and automated CI promotion
 
 Release date: 2026-05-20
