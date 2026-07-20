@@ -41,13 +41,41 @@ allowed-tools: ["Bash(git status:*)", "Bash(git branch:*)", "Bash(git diff:*)", 
 
 8. **Запушить в `main`.** `git push`.
 
-9. **Создать pre-release.**
+9. **Создать pre-release.** Перед этим запомнить ID последнего run'а `publish-npm.yml` на событие `release` — чтобы потом отличить новый run от старых:
+   ```bash
+   prev_run_id=$(gh run list --workflow=publish-npm.yml --json databaseId,event \
+     --jq '[.[] | select(.event=="release")] | first | .databaseId // empty')
+   ```
+   Затем создать pre-release:
    ```bash
    gh release create v<VERSION> --prerelease --title "v<VERSION> (beta)" --notes "..."
    ```
    `--notes` — сжатая выжимка из CHANGELOG-записи этой версии, не копия один-в-один.
 
-10. **Итог пользователю.** Версия, ссылка на созданный pre-release, и что дальше ничего вручную делать не нужно — CI (`verify` → `promote-and-publish`) сам опубликует в npm и снимет пометку beta, если проверки пройдут.
+10. **Дождаться CI.** GitHub запускает workflow не мгновенно — сначала подождать, пока появится новый run, затем дождаться его завершения:
+    ```bash
+    run_id=""
+    for i in $(seq 1 30); do
+      candidate=$(gh run list --workflow=publish-npm.yml --json databaseId,event \
+        --jq '[.[] | select(.event=="release")] | first | .databaseId // empty')
+      if [ -n "$candidate" ] && [ "$candidate" != "$prev_run_id" ]; then
+        run_id="$candidate"
+        break
+      fi
+      sleep 5
+    done
+
+    if [ -z "$run_id" ]; then
+      echo "run не появился за ~2.5 минуты — проверить вручную: gh run list --workflow=publish-npm.yml"
+    else
+      gh run watch "$run_id" --exit-status
+    fi
+    ```
+    `gh run watch --exit-status` сам поллит статус и блокируется до завершения run'а (обычно несколько минут: install, tests, typecheck, npm publish) — вызывать через Bash с достаточным таймаутом (до 600000 мс) или в фоне (`run_in_background`), не опрашивать вручную короткими `sleep`. Если run не появился за отведённое время — не считать это ни успехом, ни провалом, а сообщить пользователю как отдельную проблему (см. шаг 11).
+
+11. **Проверить результат и доложить.** После завершения run'а — `gh run view "$run_id" --json conclusion,jobs`:
+    - **`conclusion == "success"`**: `verify` и `promote-and-publish` прошли, релиз опубликован в npm и снят с пометки beta. Подтвердить это фактом — `gh release view v<VERSION> --json isPrerelease -q .isPrerelease` должно вернуть `false`. Сообщить пользователю: версия, ссылка на релиз (теперь stable), что ничего вручную делать не нужно.
+    - **`conclusion != "success"` (или run не появился)**: релиз остаётся pre-release, в npm ничего не опубликовано. Найти упавший job/step (`gh run view "$run_id" --json jobs --jq '.jobs[] | select(.conclusion!="success")'`), показать хвост лога (`gh run view "$run_id" --log-failed | tail -50`), явно сказать пользователю, что автоматическая часть релиза не завершилась, и что делать дальше (поправить причину и запушить фикс — CI перезапустится на этот же pre-release release, либо вручную `gh run rerun "$run_id" --failed`). Не выдавать это за успешный релиз.
 
 ## Что не делать
 
@@ -55,3 +83,4 @@ allowed-tools: ["Bash(git status:*)", "Bash(git branch:*)", "Bash(git diff:*)", 
 - Не промоутить релиз из pre-release в stable вручную — CI делает это после `verify`.
 - Не использовать `git commit --no-verify` или `git push --force`.
 - Если `bun test` / `typecheck` падают — не коммитить, остановиться и сообщить.
+- Не докладывать релиз как успешный, пока `gh run watch` не подтвердил `conclusion == "success"` — сам факт `gh release create` ничего не гарантирует, CI ещё может упасть.

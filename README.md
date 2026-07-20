@@ -242,7 +242,7 @@ If you rely on the built-in MCP config, the CLI preview also reminds you which e
 
 ## Releasing
 
-Cutting a release (version bump, `README.md`/`AGENTS.md`/`CHANGELOG.md` updates, commit, push, and GitHub pre-release) used to be a handful of manual steps done one at a time. If you're working in Claude Code, the project ships a local slash command, `/release` (`.claude/commands/release.md`), that drives the whole flow for you — just run it and it bumps `package.json`, writes the `CHANGELOG.md` entry, updates the docs that actually changed, runs `bun test`/`bun run typecheck`, commits, pushes to `main`, and opens the `gh release create --prerelease` that CI picks up. See `AGENTS.md` → Release Flow for the full manual steps this command automates.
+Cutting a release (version bump, `README.md`/`AGENTS.md`/`CHANGELOG.md` updates, commit, push, and GitHub pre-release) used to be a handful of manual steps done one at a time. If you're working in Claude Code, the project ships a local slash command, `/release` (`.claude/commands/release.md`), that drives the whole flow for you — just run it and it bumps `package.json`, writes the `CHANGELOG.md` entry, updates the docs that actually changed, runs `bun test`/`bun run typecheck`, commits, pushes to `main`, opens the `gh release create --prerelease`, then waits for the `publish-npm.yml` CI run to finish and reports back whether it actually succeeded (promoted to stable and published) or failed. See `AGENTS.md` → Release Flow for the full manual steps this command automates.
 
 ## Project Structure
 

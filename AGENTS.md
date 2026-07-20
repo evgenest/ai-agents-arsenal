@@ -23,7 +23,7 @@ This workflow uses GitHub Actions OIDC, so no `NPM_TOKEN` repository secret is r
 
 ### For each new release
 
-If you're using Claude Code, running `/release` in this repo drives all of the steps below in one go (version bump, `README.md`/`AGENTS.md`/`CHANGELOG.md` updates, typecheck/test, commit, push, and the `gh release create --prerelease` call) — see `.claude/commands/release.md`. The manual steps:
+If you're using Claude Code, running `/release` in this repo drives all of the steps below in one go (version bump, `README.md`/`AGENTS.md`/`CHANGELOG.md` updates, typecheck/test, commit, push, the `gh release create --prerelease` call, and then waiting for the resulting `publish-npm.yml` CI run to finish and reporting whether it actually succeeded) — see `.claude/commands/release.md`. The manual steps:
 
 1. Update `package.json` and `CHANGELOG.md` to the new version.
 2. Commit and push the version bump to `main`.

@@ -4,6 +4,20 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v5.2.1 - `/release` waits for CI and reports the real outcome
+
+Release date: 2026-07-20
+
+Tag: `v5.2.1`
+
+Changes since `v5.2.0`:
+- `.claude/commands/release.md`: after `gh release create --prerelease`, the command now records the previous `publish-npm.yml` run id, polls for the new run tied to this release, and blocks on `gh run watch --exit-status` instead of just telling the user "CI will handle it"
+- adds an explicit reporting step: on success, confirms via `gh release view --json isPrerelease` that the release actually flipped to stable before telling the user it's done; on failure (or if no run ever appears), surfaces the failing job/step and log tail instead of reporting the release as complete
+- `AGENTS.md` / `README.md`: updated the `/release` description to mention it waits for CI and reports the real result, not just that it "kicks off" the pre-release
+
+Net effect:
+- previously `/release` could report "done" right after `gh release create`, even though CI (tests, typecheck, npm publish) hadn't run yet and could still fail — now the command's own final status reflects whether the release actually went out, not just whether the pre-release object was created
+
 ## v5.2.0 - `/release` slash command for the release flow
 
 Release date: 2026-07-20
