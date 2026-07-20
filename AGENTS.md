@@ -17,6 +17,12 @@ Use this GitHub identity:
 
 This workflow uses GitHub Actions OIDC, so no `NPM_TOKEN` repository secret is required.
 
+Also run once per clone:
+```bash
+git config core.hooksPath .githooks
+```
+Wires up `.githooks/pre-commit` (a `bun` script, no extra dependency), which blocks any commit that changes `package.json`'s `version` without also staging a `CHANGELOG.md` update, and prints a non-blocking reminder when `setup/`, `config/`, or `index.ts` change without a version bump — to catch the "forgot to bump the version and write the changelog entry" case this Release Flow section depends on. This is a local git config setting, not tracked by git, so it doesn't propagate automatically to other clones or CI — each contributor runs it once.
+
 ### For each new release
 
 1. Update `package.json` and `CHANGELOG.md` to the new version.

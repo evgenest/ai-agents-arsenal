@@ -1,0 +1,40 @@
+#!/usr/bin/env bun
+import { $ } from "bun";
+
+async function readVersionAt(ref: string): Promise<string | null> {
+  try {
+    const raw = await $`git show ${ref}`.text();
+    const data = JSON.parse(raw) as { version?: unknown };
+    return typeof data.version === "string" ? data.version : null;
+  } catch {
+    return null;
+  }
+}
+
+const stagedFiles = (await $`git diff --cached --name-only`.text())
+  .trim()
+  .split("\n")
+  .filter(Boolean);
+
+const oldVersion = await readVersionAt("HEAD:package.json");
+const newVersion = await readVersionAt(":package.json");
+const versionBumped = newVersion !== null && newVersion !== oldVersion;
+
+if (versionBumped && !stagedFiles.includes("CHANGELOG.md")) {
+  console.error(`✗ pre-commit: package.json version changed (${oldVersion ?? "?"} → ${newVersion}) but CHANGELOG.md is not staged.`);
+  console.error(`  Add a matching CHANGELOG.md entry before committing a version bump (see AGENTS.md → Release Flow).`);
+  console.error(`  Bypass (not recommended): git commit --no-verify`);
+  process.exit(1);
+}
+
+const functionalChange = stagedFiles.some(
+  (f) => f.startsWith("setup/") || f.startsWith("config/") || f === "index.ts",
+);
+
+if (functionalChange && !versionBumped) {
+  console.error(`ℹ pre-commit reminder: setup/ or config/ changed in this commit.`);
+  console.error(`  Before your next release: bump package.json's version, add a CHANGELOG.md entry, and check`);
+  console.error(`  whether README.md / AGENTS.md need updating too (see AGENTS.md → Release Flow).`);
+}
+
+process.exit(0);

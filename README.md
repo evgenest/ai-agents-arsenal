@@ -48,6 +48,14 @@ This keeps skill installation local to the project you run the command from. MCP
 bun install
 ```
 
+If you plan to commit changes back to this repo, also run once:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This wires up a pre-commit hook (`.githooks/pre-commit`, a `bun` script — no extra dependency) that blocks committing a `package.json` version bump without a matching `CHANGELOG.md` entry, and reminds you (without blocking) when `setup/`, `config/`, or `index.ts` change without a version bump. It's a local git setting, not tracked by git, so each clone needs to run it once — see [AGENTS.md](./AGENTS.md#release-flow) for the full release flow it supports.
+
 Then run the local entrypoint:
 
 ```bash
