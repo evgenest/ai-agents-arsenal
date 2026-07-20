@@ -28,6 +28,8 @@ export async function setupSkills(
   skillsConfig: SkillsConfigEntry[],
   scope: SkillsInstallScope = "global",
 ) {
+  await ensureGlobalSkillsCliFresh();
+
   const activeAgents = agentsConfig.filter((a) => a.enabled);
 
   if (scope === "project") {
@@ -36,6 +38,65 @@ export async function setupSkills(
   }
 
   await setupGlobalSkills(agentsConfig, activeAgents, skillsConfig);
+}
+
+/**
+ * Every command in this file runs the `skills` CLI through `bunx skills ...`.
+ * `bunx` resolves a package that's already installed globally via bun
+ * (`bun add -g skills`) directly, with no registry round-trip at all — but
+ * it also never checks whether that global copy is outdated, so once
+ * installed it can go stale indefinitely. `bun update -g skills` is a
+ * one-time, best-effort check per invocation of this script that keeps it
+ * fresh, run only when `skills` is already a global bun package — never as
+ * a way to install it globally in the first place, since `bun update -g`
+ * would happily do that too (confirmed by testing) if we didn't guard it.
+ *
+ * Deliberately no `--latest`: that flag discards the semver range recorded
+ * in `~/.bun/install/global/package.json` (`^x.y.z` by default) and jumps
+ * straight to whatever npm's `latest` dist-tag currently points to, which
+ * isn't necessarily a well-vetted release for every package. Plain
+ * `bun update -g skills` stays within that already-accepted range — patch
+ * and minor bumps only, no crossing a major version, and no prereleases
+ * unless one was explicitly requested when the range was first set.
+ */
+async function ensureGlobalSkillsCliFresh(): Promise<void> {
+  const packageJsonPath = await resolveGlobalSkillsPackageJson();
+  if (!packageJsonPath) {
+    return;
+  }
+
+  try {
+    await $`bun update -g skills`.quiet();
+  } catch {
+    // Offline, registry hiccup, etc. — keep using whatever's already installed.
+    return;
+  }
+
+  const version = await readPackageVersion(packageJsonPath);
+  if (version) {
+    console.log(`  ✓ Global \`skills\` CLI is up to date (v${version})`);
+  }
+}
+
+/** Path to the globally bun-installed `skills` package's package.json, or null if it isn't one. */
+async function resolveGlobalSkillsPackageJson(): Promise<string | null> {
+  try {
+    const result = await $`bun pm bin -g`.quiet();
+    const globalBinDir = result.stdout.toString().trim();
+    const packageJsonPath = join(globalBinDir, "..", "install", "global", "node_modules", "skills", "package.json");
+    return (await pathExists(packageJsonPath)) ? packageJsonPath : null;
+  } catch {
+    return null;
+  }
+}
+
+async function readPackageVersion(packageJsonPath: string): Promise<string | null> {
+  try {
+    const raw = await Bun.file(packageJsonPath).json() as { version?: unknown };
+    return typeof raw.version === "string" ? raw.version : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

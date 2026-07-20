@@ -60,7 +60,16 @@ index.ts          →  setup/run.ts      →  setup/skills.ts   →  config/agen
 
 **`setup/preflight.ts`** — renders the setup preview shown before installation. Prints phase-specific details for skills and MCP along with config source info, environment variable references, and override flag hints.
 
-**`setup/skills.ts`** — exports `setupSkills()`. Receives `activeAgents` and `skillsConfig`, then runs `bunx skills add <repo> --skill <name> -g -a <agent> -y` for each skill/agent combination via Bun's shell `$` template.
+**`setup/skills.ts`** — exports `setupSkills()`. Receives `agentsConfig`, `skillsConfig`, and a scope (`"global"` default, or `"project"` from `--project`).
+
+Before anything else, `ensureGlobalSkillsCliFresh()` runs `bun update -g skills` (no `--latest`, stays within the already-accepted `^x.y.z` range) once per invocation — but only when `skills` is already a global bun package (checked via `bun pm bin -g` + the resulting `.../install/global/node_modules/skills/package.json`), never as a way to install it globally. This exists because `bunx skills ...` resolves an already-globally-installed package directly with zero registry round-trip, but never checks it's current on its own.
+
+**Global scope** (`setupGlobalSkills`) never passes our active agents to the `skills` CLI's own `-a` flag — the CLI's per-agent targeting is unreliable non-interactively (see README §"What Gets Installed → Skills" for specifics). Instead:
+- `bunx skills list -g --json` lists what's already installed. Already-present skills are refreshed with one batched `bunx skills update <names> -g -y`; missing ones go through `bunx skills add <repo> --skill <name> -g -a claude-code -y` — passing only `claude-code` makes the CLI write the skill's real files directly into `~/.claude/skills/<skill>` (the `claude-code` entry's `skillsPath` in `agents.config.ts`), which this codebase treats as the canonical store.
+- Entries with `pin` (see below) skip `bunx skills add` entirely: `fetchPinnedSkill()` downloads `https://codeload.github.com/<repo>/tar.gz/<ref>` and extracts it to a temp dir; `installPinnedSkill()` copies the result straight into the canonical store. Idempotency is a plain `stat()` on the target dir — pins are immutable, so no network call once present.
+- `createSkillSymlinks()` then symlinks every *other* active agent's `skillsPath` to the canonical store itself (self-managed, not delegated to the CLI), repairing stale/broken symlinks on every run.
+
+**Project scope** (`setupProjectSkills`) has no shared canonical store to reuse across agents. Regular entries still delegate to `bunx skills add <repo> --skill <name> -a agent1 -a agent2 ... -y` in one call. Pinned entries can't use that shortcut: for a *local path* source (which a pinned commit's extracted tarball is), this build of the `skills` CLI only reliably symlinks the first `-a` target in a multi-agent call and silently drops the rest — reproduced by hand, not documented CLI behavior. `installPinnedSkillToProject()` works around it by calling `bunx skills add <localDir> --skill <name> -a <agent> -y` once per active agent instead.
 
 **`setup/mcp.ts`** — thin MCP entry point. Receives loaded `activeMcpTargets` plus `mcpServers`, then delegates target-specific writes to focused submodules.
 
@@ -87,11 +96,13 @@ Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each
 
 ### Config Layer (`config/`)
 
-**`config/agents.config.ts`** — list of all supported agents with `enabled` boolean flags plus `mcpTargets`. The runtime loader derives `activeAgents` and `activeMcpTargets` from this array after loading either the default file or a user-provided override. Edit `enabled` here to include or exclude agents from all operations.
+**`config/agents.config.ts`** — list of all supported agents with `enabled` boolean flags, `mcpTargets`, and `skillsPath` (each agent's global skills directory). The runtime loader derives `activeAgents` and `activeMcpTargets` from this array after loading either the default file or a user-provided override. Edit `enabled` here to include or exclude agents from all operations.
 
-Supported agent IDs: `claude-code`, `github-copilot`, `antigravity`, `antigravity-cli`, `cursor`, `windsurf`, `codex`, `gemini-cli`, `kilo`. Note: `antigravity` and `antigravity-cli` are treated as distinct agents with different global skill paths (`~/.gemini/antigravity/skills/` and `~/.gemini/antigravity-cli/skills/` respectively).
+Every entry carries `skillsPath`, sourced from the `skills` npm package's own Supported Agents table (`vercel-labs/skills` README) — including agents currently `enabled: false`, so flipping one on doesn't require looking up its path. `setup/skills.ts` owns symlinking into these paths itself rather than the `skills` CLI (`claude-code`'s path doubles as the canonical store — see below).
 
-**`config/skills.config.ts`** — array of `{ repo, skills[] }` objects. Each entry maps a GitHub repo to one or more skill names. The `bunx skills add` CLI resolves skills from these repos.
+Supported agent IDs: `claude-code`, `github-copilot`, `antigravity`, `antigravity-cli`, `cursor`, `windsurf`, `codex`, `gemini-cli`, `kilo`. Note: `antigravity` and `antigravity-cli` are distinct agents with different global skill paths (`~/.gemini/antigravity/skills/` and `~/.gemini/antigravity-cli/skills/` respectively).
+
+**`config/skills.config.ts`** — array of `{ repo, skills[], pin? }` objects. Each entry maps a GitHub repo to one or more skill names, installed via the `bunx skills` CLI. An entry may instead carry `pin: { ref, path }` — a commit SHA and the skill's path within the repo at that commit — for a skill the `skills` CLI can't reach at the ref you need (e.g. it vanished from the repo's default branch). An entry with `pin` must declare exactly one skill; see `setup/skills.ts` for why `bunx skills add` can't do this itself and how the fetch works instead.
 
 **`config/mcp.config.ts`** — exports `McpServer` type union and `mcpServers` record. Two server shapes:
 
@@ -139,15 +150,15 @@ exa: {
 | `~/.gemini/settings.json` | `setupGeminiCliMcp()` | `mcpServers` key merged in |
 | `~/.config/kilo/kilo.jsonc` | `setupKiloMcp()` | `mcp` key merged in |
 
-Skills are installed globally via the `bunx skills` CLI — they write to tool-specific global locations handled by that CLI.
+Skills are installed via the `bunx skills` CLI, but this codebase — not the CLI — decides where each agent's copy ends up. Global installs land as real files at `claude-code`'s `skillsPath` (`~/.claude/skills/<skill>` by default); every other active agent gets a symlink into that directory, created and repaired by `setup/skills.ts` on each run. Project-scope installs (`--project`) do delegate per-agent placement to the CLI's own `-a` targeting, except for pinned skills, which are still installed one agent at a time (see `setup/skills.ts`).
 
 ## How to Extend
 
 ### Add an agent
 
-In `config/agents.config.ts`, add to `agentsConfig`:
+In `config/agents.config.ts`, add to `agentsConfig`, including `skillsPath` (its global skills directory — look it up in the Supported Agents table in the `skills` npm package's own README, don't guess):
 ```ts
-{ id: "new-agent-id", enabled: true, mcpTargets: ["cursor"] },
+{ id: "new-agent-id", enabled: true, mcpTargets: ["cursor"], skillsPath: "~/.new-agent/skills" },
 ```
 The `as const` on the array means the `id` values are typed as string literals. Adding a new entry is safe.
 
@@ -156,6 +167,17 @@ The `as const` on the array means the `id` values are typed as string literals. 
 In `config/skills.config.ts`, add or extend an entry:
 ```ts
 { repo: "owner/repo", skills: ["skill-name"] },
+```
+
+### Pin a skill to a fixed commit
+
+Only when the `skills` CLI genuinely can't reach the skill at the ref you need (see `setup/skills.ts`'s `fetchPinnedSkill` for why that can happen). The entry must declare exactly one skill:
+```ts
+{
+  repo: "owner/repo",
+  skills: ["skill-name"],
+  pin: { ref: "<commit-sha>", path: "path/to/skill-name" },
+},
 ```
 
 ### Add an MCP server
