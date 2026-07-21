@@ -17,7 +17,7 @@ export function getVscodeMcpPath(): string {
 }
 
 export function getAntigravityMcpPath(): string {
-  return join(homedir(), ".gemini", "antigravity", "mcp_config.json");
+  return join(homedir(), ".gemini", "config", "mcp_config.json");
 }
 
 export function getCursorMcpPath(): string {
@@ -30,10 +30,6 @@ export function getWindsurfMcpPath(): string {
 
 export function getCodexConfigPath(): string {
   return join(homedir(), ".codex", "config.toml");
-}
-
-export function getGeminiSettingsPath(): string {
-  return join(homedir(), ".gemini", "settings.json");
 }
 
 export function getKiloConfigPath(): string {

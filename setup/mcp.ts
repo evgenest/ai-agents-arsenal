@@ -1,10 +1,9 @@
 import type { McpTarget } from "../config/agents.config";
 import type { McpServer } from "../config/mcp.config";
-import { setupAntigravityMcp } from "./mcp/targets/antigravity";
+import { setupAntigravityCliMcp, setupAntigravityMcp } from "./mcp/targets/antigravity";
 import { setupClaudeCodeMcp } from "./mcp/targets/claude-code";
 import { setupCodexMcp } from "./mcp/targets/codex";
 import { setupCursorMcp } from "./mcp/targets/cursor";
-import { setupGeminiCliMcp } from "./mcp/targets/gemini-cli";
 import { setupKiloMcp } from "./mcp/targets/kilo";
 import { setupVscodeMcp } from "./mcp/targets/vscode";
 import { setupWindsurfMcp } from "./mcp/targets/windsurf";
@@ -13,10 +12,10 @@ const mcpSetupByTarget: Record<McpTarget, (mcpServers: Record<string, McpServer>
   "claude-code": setupClaudeCodeMcp,
   vscode: setupVscodeMcp,
   antigravity: setupAntigravityMcp,
+  "antigravity-cli": setupAntigravityCliMcp,
   cursor: setupCursorMcp,
   windsurf: setupWindsurfMcp,
   codex: setupCodexMcp,
-  "gemini-cli": setupGeminiCliMcp,
   kilo: setupKiloMcp,
 };
 

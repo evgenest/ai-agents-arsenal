@@ -1,6 +1,6 @@
 import { loadSetupConfig, type ConfigPathOverrides } from "./config";
 import { setupMcp } from "./mcp";
-import { printSetupPreview } from "./preflight";
+import { printMissingMcpEnvVarsSummary, printSetupPreview } from "./preflight";
 import { setupSkills, type SkillsInstallScope } from "./skills";
 
 export type SetupSelection = {
@@ -120,12 +120,16 @@ export async function runSetup(argv = process.argv.slice(2)) {
   printSetupPreview({ runSkills, runMcp, skillsInstallScope }, config);
 
   if (dryRun) {
+    if (runMcp) printMissingMcpEnvVarsSummary(config.mcpServers, config.activeMcpTargets);
     console.log("\nDry run: no changes made.");
     return;
   }
 
   if (runSkills) await setupSkills(config.agentsConfig, config.skillsConfig, skillsInstallScope);
-  if (runMcp) await setupMcp(config.activeMcpTargets, config.mcpServers);
+  if (runMcp) {
+    await setupMcp(config.activeMcpTargets, config.mcpServers);
+    printMissingMcpEnvVarsSummary(config.mcpServers, config.activeMcpTargets);
+  }
 }
 
 function readInlineFlagValue(argument: string, flag: string): string {

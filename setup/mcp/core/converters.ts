@@ -1,5 +1,5 @@
 import { type McpServer } from "../../../config/mcp.config";
-import { resolveEnvReferences, toEnvScopedFormat, toGeminiEnvFormat, toKiloFormat, toVscodeFormat } from "./env";
+import { resolveEnvReferences, toEnvScopedFormat, toKiloFormat, toVscodeFormat } from "./env";
 import type { JsonObject } from "./json";
 import { isHttpServer, mapStringRecord } from "./server";
 
@@ -63,23 +63,6 @@ export function convertServerForWindsurf(server: McpServer): JsonObject {
     command: toEnvScopedFormat(server.command),
     args: server.args?.map(toEnvScopedFormat),
     env: mapStringRecord(server.env, toEnvScopedFormat),
-  };
-}
-
-export function convertServerForGemini(server: McpServer): JsonObject {
-  if (isHttpServer(server)) {
-    return {
-      httpUrl: server.url,
-      headers: mapStringRecord(server.headers, resolveEnvReferences),
-      includeTools: server.tools,
-    };
-  }
-
-  return {
-    command: server.command,
-    args: server.args?.map(resolveEnvReferences),
-    env: mapStringRecord(server.env, toGeminiEnvFormat),
-    includeTools: server.tools,
   };
 }
 

@@ -84,21 +84,20 @@ Before anything else, `ensureGlobalSkillsCliFresh()` runs once per invocation. I
 - `json.ts` — JSON / JSONC readers and JSONC parsing.
 - `files.ts` — backup creation and parent-directory setup.
 - `paths.ts` — global config path resolution per target.
-- `converters.ts` — server-shape conversion for Antigravity, VS Code, Cursor, Windsurf, Gemini CLI, and Kilo.
+- `converters.ts` — server-shape conversion for Antigravity, VS Code, Cursor, Windsurf, and Kilo.
 - `codex.ts` — TOML rendering and managed-section updates for Codex.
 - `server.ts` — shared server-shape helpers.
 
 **`setup/mcp/targets/`** — one writer per MCP target:
 - `claude-code.ts` — merges `mcpServers` into `~/.claude/settings.json`.
 - `vscode.ts` — merges converted servers into `%APPDATA%/Code/User/mcp.json`.
-- `antigravity.ts` — merges converted servers into `~/.gemini/antigravity/mcp_config.json`.
+- `antigravity.ts` — merges converted servers into `~/.gemini/config/mcp_config.json` via `setupAntigravityMcp()` (`antigravity` target) and `setupAntigravityCliMcp()` (`antigravity-cli` target), thin wrappers over one shared writer that only differ in the console-log label — see the `agents.config.ts` note on why IDE and CLI are still separate `McpTarget`s despite sharing a file.
 - `cursor.ts` — merges converted servers into `~/.cursor/mcp.json`.
 - `windsurf.ts` — merges converted servers into `~/.codeium/windsurf/mcp_config.json`.
 - `codex.ts` — writes managed `[mcp_servers.*]` entries into `~/.codex/config.toml`.
-- `gemini-cli.ts` — merges converted servers into `~/.gemini/settings.json`.
 - `kilo.ts` — merges converted servers into `~/.config/kilo/kilo.jsonc`.
 
-Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each target writer converts them to the format that agent expects. Examples: VS Code and Windsurf use `${env:VAR}`, Antigravity resolves `${VAR}` to concrete values while writing `mcp_config.json`, Gemini CLI uses `$VAR` in `env`, Codex uses `env_vars` / `env_http_headers`, and Kilo uses `{env:VAR}`. For Exa specifically, the HTTP server definition uses the `Authorization: Bearer ${EXA_API_KEY}` header shape.
+Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each target writer converts them to the format that agent expects. Examples: VS Code and Windsurf use `${env:VAR}`, Antigravity resolves `${VAR}` to concrete values while writing `mcp_config.json` (no env-var substitution syntax of its own), Codex uses `env_vars` / `env_http_headers`, and Kilo uses `{env:VAR}`. For Exa specifically, the HTTP server definition uses the `Authorization: Bearer ${EXA_API_KEY}` header shape.
 
 ### Config Layer (`config/`)
 
@@ -106,7 +105,7 @@ Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each
 
 Every entry carries `skillsPath`, sourced from the `skills` npm package's own Supported Agents table (`vercel-labs/skills` README) — including agents currently `enabled: false`, so flipping one on doesn't require looking up its path. `setup/skills.ts` owns symlinking into these paths itself rather than the `skills` CLI (`claude-code`'s path doubles as the canonical store — see below).
 
-Supported agent IDs: `claude-code`, `github-copilot`, `antigravity`, `antigravity-cli`, `cursor`, `windsurf`, `codex`, `gemini-cli`, `kilo`. Note: `antigravity` and `antigravity-cli` are distinct agents with different global skill paths (`~/.gemini/antigravity/skills/` and `~/.gemini/antigravity-cli/skills/` respectively).
+Supported agent IDs: `claude-code`, `github-copilot`, `antigravity`, `antigravity-cli`, `cursor`, `windsurf`, `codex`, `kilo`. Note: `antigravity` and `antigravity-cli` are distinct agents with different global skill paths (`~/.gemini/antigravity/skills/` and `~/.gemini/antigravity-cli/skills/` respectively), but the same two IDs are also the distinct `McpTarget`s used for MCP setup — both currently resolve to the same global MCP config file, `~/.gemini/config/mcp_config.json` (Antigravity IDE and CLI share it — see https://antigravity.google/docs/mcp).
 
 **`config/skills.config.ts`** — array of `{ repo, skills[], pin? }` objects. Each entry maps a GitHub repo to one or more skill names, installed via the `bunx skills` CLI. An entry may instead carry `pin: { ref, path }` — a commit SHA and the skill's path within the repo at that commit — for a skill the `skills` CLI can't reach at the ref you need (e.g. it vanished from the repo's default branch). An entry with `pin` must declare exactly one skill; see `setup/skills.ts` for why `bunx skills add` can't do this itself and how the fetch works instead.
 
@@ -149,11 +148,10 @@ exa: {
 |---|---|---|
 | `~/.claude/settings.json` | `setupClaudeCodeMcp()` | `mcpServers` key merged in |
 | `%APPDATA%/Code/User/mcp.json` | `setupVscodeMcp()` | `servers` key, VSCode format, global |
-| `~/.gemini/antigravity/mcp_config.json` | `setupAntigravityMcp()` | `mcpServers` key merged in |
+| `~/.gemini/config/mcp_config.json` | `setupAntigravityMcp()` / `setupAntigravityCliMcp()` | `mcpServers` key merged in |
 | `~/.cursor/mcp.json` | `setupCursorMcp()` | `mcpServers` key merged in |
 | `~/.codeium/windsurf/mcp_config.json` | `setupWindsurfMcp()` | `mcpServers` key merged in |
 | `~/.codex/config.toml` | `setupCodexMcp()` | managed `[mcp_servers.*]` sections |
-| `~/.gemini/settings.json` | `setupGeminiCliMcp()` | `mcpServers` key merged in |
 | `~/.config/kilo/kilo.jsonc` | `setupKiloMcp()` | `mcp` key merged in |
 
 Skills are installed via the `bunx skills` CLI, but this codebase — not the CLI — decides where each agent's copy ends up. Global installs land as real files at `claude-code`'s `skillsPath` (`~/.claude/skills/<skill>` by default); every other active agent gets a symlink into that directory, created and repaired by `setup/skills.ts` on each run. Project-scope installs (`--project`) do delegate per-agent placement to the CLI's own `-a` targeting, except for pinned skills, which are still installed one agent at a time (see `setup/skills.ts`).

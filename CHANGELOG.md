@@ -4,6 +4,27 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v6.0.0 - Antigravity CLI target, real MCP config path, and Gemini CLI removal
+
+Release date: 2026-07-21
+
+Tag: `v6.0.0`
+
+Changes since `v5.2.1`:
+- `setup/mcp/core/paths.ts`: fixes `getAntigravityMcpPath()` — it was pointing at `~/.gemini/antigravity/mcp_config.json`, a path Antigravity CLI never reads; the real path, confirmed against both a live install and Google's own docs (https://antigravity.google/docs/mcp), is `~/.gemini/config/mcp_config.json`, shared by Antigravity IDE and CLI
+- `config/agents.config.ts`: splits the single `"antigravity"` `McpTarget` into `"antigravity"` (IDE) and `"antigravity-cli"` (CLI) — both still resolve to the same shared config file, but the `antigravity-cli` agent entry's `mcpTargets` now correctly says `antigravity-cli` instead of the generic `antigravity`, so target names in every log/preview line match the actual product
+- `setup/mcp/targets/antigravity.ts`: `setupAntigravityMcp()` (IDE) and new `setupAntigravityCliMcp()` (CLI) are now thin wrappers over one shared writer that only differ in the console-log label ("Antigravity" vs "Antigravity CLI"), matching the wording every other target's writer already used
+- removes the `gemini-cli` MCP target entirely (breaking for any custom `agents.config.ts` still referencing it — it now throws "Unsupported MCP target"): deletes `setup/mcp/targets/gemini-cli.ts`, `convertServerForGemini()` and `toGeminiEnvFormat()`, `getGeminiSettingsPath()`, and the `SUPPORTED_MCP_TARGETS`/`McpTarget` entries
+- `setup/preflight.ts` (new): `getMissingMcpEnvVars()` checks which `${VAR}` references in `config/mcp.config.ts` aren't set in the current shell — by name only, values are never read or logged — and `printMissingMcpEnvVarsSummary()` prints a boxed warning at the end of the run (not just in the early preview, so it survives scrolling terminal output from npx installs etc.). When Antigravity is among the active targets, the box also names the file to hand-edit (`~/.gemini/config/mcp_config.json`) and the exact JSON path for each missing var (e.g. `mcpServers.exa.headers.Authorization`), since Antigravity bakes literal values into its config with no `${VAR}` substitution of its own
+- `setup/run.ts`: calls the new summary after `setupMcp()` (and before the dry-run early return) instead of leaving missing env vars silently undiscovered until a server fails to start
+- `setup/preflight.test.ts` (new): covers `getMissingMcpEnvVars()` against a set/unset env var
+- `README.md` / `AGENTS.md`: "Where Configs Are Written" tables and target-mapping lists updated to the real Antigravity path and the IDE/CLI split; all Gemini CLI references removed
+
+Net effect:
+- Antigravity CLI MCP setup actually works now — previously every run silently wrote to a file the CLI never looked at, so configured servers never showed up
+- a run with unset API keys now ends with a single, hard-to-miss summary instead of requiring the user to notice a missing-var problem only when a server fails to start, or to scroll back to the very top of a long run's output
+- any project depending on the `gemini-cli` MCP target needs to switch to a different target or drop that entry before upgrading
+
 ## v5.2.1 - `/release` waits for CI and reports the real outcome
 
 Release date: 2026-07-20

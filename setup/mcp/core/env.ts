@@ -17,10 +17,6 @@ export function toKiloFormat(value: string): string {
   return replaceEnvReferences(value, (variableName) => `{env:${variableName}}`);
 }
 
-export function toGeminiEnvFormat(value: string): string {
-  return replaceEnvReferences(value, (variableName) => `$${variableName}`);
-}
-
 export function resolveEnvReferences(value: string): string {
   return replaceEnvReferences(value, (variableName) => process.env[variableName] ?? "");
 }

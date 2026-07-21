@@ -160,11 +160,11 @@ Project-scope installs (`--project`) have no shared canonical store to reuse acr
 |---|---|---|
 | Claude Code (global) | `~/.claude/settings.json` | Claude Code CLI + VS Code extension |
 | VS Code / GitHub Copilot (global) | `%APPDATA%/Code/User/mcp.json` | All VS Code projects on this machine |
-| Antigravity (global) | `~/.gemini/antigravity/mcp_config.json` | Google Antigravity across all projects |
+| Antigravity IDE (global) | `~/.gemini/config/mcp_config.json` | Google Antigravity IDE across all projects |
+| Antigravity CLI (global) | `~/.gemini/config/mcp_config.json` | Google Antigravity CLI across all projects (same file as the IDE) |
 | Cursor (global) | `%USERPROFILE%\.cursor\mcp.json` | Cursor across all projects |
 | Windsurf (global) | `%USERPROFILE%\.codeium\windsurf\mcp_config.json` | Windsurf across all projects |
 | Codex (global) | `~/.codex/config.toml` | Codex CLI + IDE extension |
-| Gemini CLI (global) | `%USERPROFILE%\.gemini\settings.json` | Gemini CLI across all projects |
 | Kilo (global) | `~/.config/kilo/kilo.jsonc` | Kilo across all projects |
 
 ## Configuration
@@ -192,14 +192,13 @@ You can also choose which setup phase to run without changing agent config:
 Current MCP target mapping:
 - `claude-code` writes to `~/.claude/settings.json`
 - `github-copilot` writes to `%APPDATA%/Code/User/mcp.json`
-- `antigravity` writes to `~/.gemini/antigravity/mcp_config.json`
+- `antigravity` (IDE) and `antigravity-cli` (CLI) both write to `~/.gemini/config/mcp_config.json`
 - `cursor` writes to `%USERPROFILE%\.cursor\mcp.json`
 - `windsurf` writes to `%USERPROFILE%\.codeium\windsurf\mcp_config.json`
 - `codex` writes to `~/.codex/config.toml`
-- `gemini-cli` writes to `%USERPROFILE%\.gemini\settings.json`
 - `kilo` writes to `~/.config/kilo/kilo.jsonc`
 
-Antigravity note: custom servers are written to `~/.gemini/antigravity/mcp_config.json` using Antigravity's own `mcpServers` format. Remote servers use `serverUrl`, and `${VAR}` placeholders from `config/mcp.config.ts` are resolved to concrete values at setup time because the public Antigravity docs document literal values, not config-level env interpolation.
+Antigravity note: `antigravity` and `antigravity-cli` are separate McpTargets (they match the separate skills agent IDs, each with its own global skills path — see `config/agents.config.ts`), but both currently resolve to the same global MCP config file, `~/.gemini/config/mcp_config.json`, per [Google's own docs](https://antigravity.google/docs/mcp) — the IDE and CLI share one global config (and one workspace-local config, `.agents/mcp_config.json`, which this tool does not write). Antigravity uses its own `mcpServers` format: remote servers use `serverUrl`, and `${VAR}` placeholders from `config/mcp.config.ts` are resolved to concrete, literal values at setup time, because Antigravity's config format has no env-var substitution syntax of its own.
 
 ### Add a skill
 

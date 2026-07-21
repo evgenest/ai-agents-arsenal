@@ -82,10 +82,10 @@ const SUPPORTED_MCP_TARGETS = new Set<McpTarget>([
   "claude-code",
   "vscode",
   "antigravity",
+  "antigravity-cli",
   "cursor",
   "windsurf",
   "codex",
-  "gemini-cli",
   "kilo",
 ]);
 

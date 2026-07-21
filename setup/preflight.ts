@@ -1,5 +1,6 @@
 import type { McpServer } from "../config/mcp.config";
 import type { ConfigSource, LoadedSetupConfig } from "./config";
+import { getAntigravityMcpPath } from "./mcp/core/paths";
 import type { SkillsInstallScope } from "./skills";
 
 type SetupPreviewSelection = {
@@ -77,6 +78,95 @@ function buildMcpPreview(config: LoadedSetupConfig): string {
 function describeSource(source: ConfigSource): string {
   const label = source.kind === "default" ? "default package file" : "custom file";
   return `${label} at ${source.path}`;
+}
+
+export function getMissingMcpEnvVars(mcpServers: Record<string, McpServer>): string[] {
+  return collectMcpEnvVars(mcpServers).filter((variableName) => !process.env[variableName]);
+}
+
+// "antigravity" (IDE) and "antigravity-cli" (CLI) are separate McpTargets,
+// matching the separate skills agent IDs each has (see agents.config.ts) —
+// but both resolve to the one file Antigravity IDE and CLI share
+// (~/.gemini/config/mcp_config.json, per https://antigravity.google/docs/mcp),
+// so a single label lookup keyed by McpTarget covers both correctly.
+const ANTIGRAVITY_TARGET_LABELS: Record<string, string> = {
+  antigravity: "Antigravity",
+  "antigravity-cli": "Antigravity CLI",
+};
+
+export function printMissingMcpEnvVarsSummary(mcpServers: Record<string, McpServer>, activeMcpTargets: string[]) {
+  const missing = getMissingMcpEnvVars(mcpServers);
+  if (missing.length === 0) return;
+
+  console.log("\n┌────────────────────────────────────────────────────────────");
+  console.log("│  MCP ENV VARS WARNING");
+  console.log("├────────────────────────────────────────────────────────────");
+  console.log(`│  ✗ Not set in this shell (${missing.length}):`);
+  console.log(`│    ${missing.join(", ")}`);
+  console.log("│  MCP servers needing these may fail to start until you export");
+  console.log("│  them (values are never read or logged by this check).");
+
+  const antigravityLabel = describeAntigravityTargets(activeMcpTargets);
+  if (antigravityLabel) {
+    const locations = findEnvVarLocations(mcpServers, missing);
+    console.log("├────────────────────────────────────────────────────────────");
+    console.log(`│  ${antigravityLabel} bakes literal values into its config file — it`);
+    console.log("│  does not support ${VAR} references. Open this file and fill");
+    console.log("│  in the empty values by hand:");
+    console.log(`│    ${getAntigravityMcpPath()}`);
+    for (const { variableName, jsonPath } of locations) {
+      console.log(`│  - ${variableName} → ${jsonPath}`);
+    }
+  }
+
+  console.log("└────────────────────────────────────────────────────────────\n");
+}
+
+function describeAntigravityTargets(activeMcpTargets: string[]): string | null {
+  const labels = activeMcpTargets
+    .map((target) => ANTIGRAVITY_TARGET_LABELS[target])
+    .filter((label): label is string => Boolean(label));
+
+  return labels.length > 0 ? labels.join(" and ") : null;
+}
+
+type EnvVarLocation = {
+  variableName: string;
+  jsonPath: string;
+};
+
+function findEnvVarLocations(mcpServers: Record<string, McpServer>, missing: string[]): EnvVarLocation[] {
+  const missingSet = new Set(missing);
+  const locations: EnvVarLocation[] = [];
+
+  for (const [name, server] of Object.entries(mcpServers)) {
+    if (isHttpServer(server)) {
+      collectEnvVarLocation(server.url, `mcpServers.${name}.url`, missingSet, locations);
+      for (const [header, value] of Object.entries(server.headers ?? {})) {
+        collectEnvVarLocation(value, `mcpServers.${name}.headers.${header}`, missingSet, locations);
+      }
+      continue;
+    }
+
+    collectEnvVarLocation(server.command, `mcpServers.${name}.command`, missingSet, locations);
+    (server.args ?? []).forEach((arg, index) => {
+      collectEnvVarLocation(arg, `mcpServers.${name}.args[${index}]`, missingSet, locations);
+    });
+    for (const [key, value] of Object.entries(server.env ?? {})) {
+      collectEnvVarLocation(value, `mcpServers.${name}.env.${key}`, missingSet, locations);
+    }
+  }
+
+  return locations;
+}
+
+function collectEnvVarLocation(value: string, jsonPath: string, missing: Set<string>, out: EnvVarLocation[]) {
+  for (const match of value.matchAll(ENV_REFERENCE_PATTERN)) {
+    const variableName = match[1];
+    if (variableName && missing.has(variableName)) {
+      out.push({ variableName, jsonPath });
+    }
+  }
 }
 
 function collectMcpEnvVars(mcpServers: Record<string, McpServer>): string[] {
