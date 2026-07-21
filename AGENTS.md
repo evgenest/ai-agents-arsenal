@@ -88,14 +88,15 @@ Before anything else, `ensureGlobalSkillsCliFresh()` runs once per invocation. I
 - `codex.ts` — TOML rendering and managed-section updates for Codex.
 - `server.ts` — shared server-shape helpers.
 
-**`setup/mcp/targets/`** — one writer per MCP target:
-- `claude-code.ts` — merges into the top-level `mcpServers` key of `~/.claude.json` ("user scope" — see https://code.claude.com/docs/en/mcp#user-scope). Not `~/.claude/settings.json`, which holds permissions/hooks/env, never MCP servers.
-- `vscode.ts` — merges converted servers into `%APPDATA%/Code/User/mcp.json`.
-- `antigravity.ts` — merges converted servers into `~/.gemini/config/mcp_config.json` via `setupAntigravityMcp()` (`antigravity` target) and `setupAntigravityCliMcp()` (`antigravity-cli` target), thin wrappers over one shared writer that only differ in the console-log label — see the `agents.config.ts` note on why IDE and CLI are still separate `McpTarget`s despite sharing a file.
-- `cursor.ts` — merges converted servers into `~/.cursor/mcp.json`.
-- `windsurf.ts` — merges converted servers into `~/.codeium/windsurf/mcp_config.json`.
-- `codex.ts` — writes managed `[mcp_servers.*]` entries into `~/.codex/config.toml`.
-- `kilo.ts` — merges converted servers into `~/.config/kilo/kilo.jsonc`.
+**`setup/mcp/targets/`**:
+- `json-merge.ts` — one shared writer, `setupJsonMergeTarget(target, mcpServers)`, for every `McpTarget` except `codex`. All six follow the same recipe (read an existing JSON/JSONC file, merge converted servers into one top-level key, write it back with a timestamped backup), so the file-by-file differences — path, merge key, JSON vs JSONC, converter function, trailing newline, and the exact backup-log wording — live as data in a `jsonMergeTargets` registry (keyed by `McpTarget`) rather than as six near-identical files:
+  - `claude-code` — merges into the top-level `mcpServers` key of `~/.claude.json` ("user scope" — see https://code.claude.com/docs/en/mcp#user-scope). Not `~/.claude/settings.json`, which holds permissions/hooks/env, never MCP servers. No converter — Claude Code expands `${VAR}` itself.
+  - `vscode` — merges converted servers into the `servers` key of `%APPDATA%/Code/User/mcp.json`.
+  - `antigravity` / `antigravity-cli` — merge converted servers into the `mcpServers` key of `~/.gemini/config/mcp_config.json`; both registry entries point at the same path/key/converter and only differ in the console-log label — see the `agents.config.ts` note on why IDE and CLI are still separate `McpTarget`s despite sharing a file.
+  - `cursor` — merges converted servers into the `mcpServers` key of `~/.cursor/mcp.json`.
+  - `windsurf` — merges converted servers into the `mcpServers` key of `~/.codeium/windsurf/mcp_config.json`.
+  - `kilo` — merges converted servers into the `mcp` key of `~/.config/kilo/kilo.jsonc` (JSONC input, trailing-newline output — the one target that differs here).
+- `codex.ts` — `setupCodexMcp()`, genuinely different shape (TOML, not a JSON merge): writes managed `[mcp_servers.*]` entries into `~/.codex/config.toml`.
 
 Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each target writer converts them to the format that agent expects. Examples: Claude Code keeps `${VAR}` as-is (it expands the same syntax at runtime, per its own docs — no conversion needed), VS Code and Windsurf use `${env:VAR}`, Antigravity resolves `${VAR}` to concrete values while writing `mcp_config.json` (no env-var substitution syntax of its own), Codex uses `env_vars` / `env_http_headers`, and Kilo uses `{env:VAR}`. For Exa specifically, the HTTP server definition uses the `Authorization: Bearer ${EXA_API_KEY}` header shape.
 
@@ -146,13 +147,13 @@ exa: {
 
 | File | Written by | Contents |
 |---|---|---|
-| `~/.claude.json` (top-level `mcpServers`) | `setupClaudeCodeMcp()` | `mcpServers` key merged in ("user scope") |
-| `%APPDATA%/Code/User/mcp.json` | `setupVscodeMcp()` | `servers` key, VSCode format, global |
-| `~/.gemini/config/mcp_config.json` | `setupAntigravityMcp()` / `setupAntigravityCliMcp()` | `mcpServers` key merged in |
-| `~/.cursor/mcp.json` | `setupCursorMcp()` | `mcpServers` key merged in |
-| `~/.codeium/windsurf/mcp_config.json` | `setupWindsurfMcp()` | `mcpServers` key merged in |
+| `~/.claude.json` (top-level `mcpServers`) | `setupJsonMergeTarget("claude-code", …)` | `mcpServers` key merged in ("user scope") |
+| `%APPDATA%/Code/User/mcp.json` | `setupJsonMergeTarget("vscode", …)` | `servers` key, VSCode format, global |
+| `~/.gemini/config/mcp_config.json` | `setupJsonMergeTarget("antigravity" \| "antigravity-cli", …)` | `mcpServers` key merged in |
+| `~/.cursor/mcp.json` | `setupJsonMergeTarget("cursor", …)` | `mcpServers` key merged in |
+| `~/.codeium/windsurf/mcp_config.json` | `setupJsonMergeTarget("windsurf", …)` | `mcpServers` key merged in |
 | `~/.codex/config.toml` | `setupCodexMcp()` | managed `[mcp_servers.*]` sections |
-| `~/.config/kilo/kilo.jsonc` | `setupKiloMcp()` | `mcp` key merged in |
+| `~/.config/kilo/kilo.jsonc` | `setupJsonMergeTarget("kilo", …)` | `mcp` key merged in |
 
 Skills are installed via the `bunx skills` CLI, but this codebase — not the CLI — decides where each agent's copy ends up. Global installs land as real files at `claude-code`'s `skillsPath` (`~/.claude/skills/<skill>` by default); every other active agent gets a symlink into that directory, created and repaired by `setup/skills.ts` on each run. Project-scope installs (`--project`) do delegate per-agent placement to the CLI's own `-a` targeting, except for pinned skills, which are still installed one agent at a time (see `setup/skills.ts`).
 
@@ -198,10 +199,14 @@ Use `${VAR}` for any value that should be read from the system environment. The 
 
 ### Add a new target tool
 
-To write MCP configs for a new tool (e.g., Cursor's `mcp.json`):
-1. Add a target writer under `setup/mcp/targets/`
-2. Add or reuse shared transforms in `setup/mcp/core/` if the target needs a new format
-3. Export and register the new writer from `setup/mcp.ts`
+If the new tool reads/writes JSON or JSONC and just needs one top-level key merged in (true for every target so far except Codex):
+1. Add the `McpTarget` to `config/agents.config.ts`
+2. Add or reuse a converter in `setup/mcp/core/converters.ts` if the target needs a new server-shape format
+3. Add or reuse a path helper in `setup/mcp/core/paths.ts`
+4. Add an entry to the `jsonMergeTargets` registry in `setup/mcp/targets/json-merge.ts`
+5. Register it in `mcpSetupByTarget` in `setup/mcp.ts`, delegating to `setupJsonMergeTarget(target, mcpServers)`
+
+If the format isn't a JSON-key merge (e.g. TOML, like Codex), add a standalone writer under `setup/mcp/targets/` instead and register it directly in `setup/mcp.ts`.
 
 ## Runtime
 

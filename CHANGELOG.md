@@ -4,6 +4,23 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v6.1.0 - Real Claude Code MCP path, and one shared writer for JSON-merge targets
+
+Release date: 2026-07-21
+
+Tag: `v6.1.0`
+
+Changes since `v6.0.0`:
+- `setup/mcp/targets/claude-code.ts` was writing `mcpServers` into `~/.claude/settings.json`, which Claude Code never reads for MCP servers — that file is for permissions/hooks/env only. Per Claude Code's own docs (https://code.claude.com/docs/en/mcp), MCP servers live in `~/.claude.json`, at one of three scopes: local (nested under the current project's path), project (`.mcp.json` at a repo root, shared via git), or user (top-level `mcpServers` key, all projects). This project now writes user scope — `~/.claude.json`'s top-level `mcpServers` key — matching every other target here, which are all global/all-projects configs
+- `setup/mcp/core/paths.ts`: `getClaudeCodeSettingsPath()` → `getClaudeCodeMcpPath()`, now resolving to `~/.claude.json`. `setupClaudeCodeMcp()` only ever touches the top-level `mcpServers` key — the rest of `~/.claude.json` (OAuth account info, per-project state, caches) is read back and rewritten unchanged; merge behavior was verified against a copy of the file, not the live one, since it's actively used by the running session
+- `setup/mcp/targets/vscode.ts`: its backup-log line didn't name the product ("Existing mcp.json backed up..."), unlike every other target — now reads "Existing VS Code MCP config backed up..."
+- consolidates six near-identical target-writer files (`claude-code.ts`, `vscode.ts`, `antigravity.ts`, `cursor.ts`, `windsurf.ts`, `kilo.ts` — each read an existing JSON/JSONC file, merged converted servers into one top-level key, and wrote it back, differing only in path/key/converter/format/wording) into one new `setup/mcp/targets/json-merge.ts`: a `jsonMergeTargets` registry (keyed by `McpTarget`) holding each target's path getter, merge key, optional converter, JSON-vs-JSONC format, and trailing-newline flag, plus one `setupJsonMergeTarget()` writer shared by all of them. `setup/mcp/targets/codex.ts` (TOML, not a JSON merge) is untouched and still registered directly in `setup/mcp.ts`. On-disk behavior for every target was verified byte-for-byte identical against the pre-refactor files (backup/write log wording, merged keys, converter output, trailing newline) using a throwaway `$HOME` seeded with fixture config files
+- `AGENTS.md`: `setup/mcp/targets/` file listing, "Where Configs Are Written" table, and "Add a new target tool" instructions updated to describe the registry-based structure
+
+Net effect:
+- Claude Code MCP setup via this tool actually works now — previously every run silently wrote to a file Claude Code never reads for MCP, so configured servers never showed up in `claude mcp list`
+- adding a JSON-merge-shaped MCP target going forward is a one-entry addition to `jsonMergeTargets`, not a new file to keep in sync by hand — the exact kind of drift that caused the `vscode.ts` wording gap above and the Antigravity path bug fixed in v6.0.0
+
 ## v6.0.0 - Antigravity CLI target, real MCP config path, and Gemini CLI removal
 
 Release date: 2026-07-21

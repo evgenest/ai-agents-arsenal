@@ -1,22 +1,17 @@
 import type { McpTarget } from "../config/agents.config";
 import type { McpServer } from "../config/mcp.config";
-import { setupAntigravityCliMcp, setupAntigravityMcp } from "./mcp/targets/antigravity";
-import { setupClaudeCodeMcp } from "./mcp/targets/claude-code";
 import { setupCodexMcp } from "./mcp/targets/codex";
-import { setupCursorMcp } from "./mcp/targets/cursor";
-import { setupKiloMcp } from "./mcp/targets/kilo";
-import { setupVscodeMcp } from "./mcp/targets/vscode";
-import { setupWindsurfMcp } from "./mcp/targets/windsurf";
+import { setupJsonMergeTarget } from "./mcp/targets/json-merge";
 
 const mcpSetupByTarget: Record<McpTarget, (mcpServers: Record<string, McpServer>) => Promise<void>> = {
-  "claude-code": setupClaudeCodeMcp,
-  vscode: setupVscodeMcp,
-  antigravity: setupAntigravityMcp,
-  "antigravity-cli": setupAntigravityCliMcp,
-  cursor: setupCursorMcp,
-  windsurf: setupWindsurfMcp,
+  "claude-code": (mcpServers) => setupJsonMergeTarget("claude-code", mcpServers),
+  vscode: (mcpServers) => setupJsonMergeTarget("vscode", mcpServers),
+  antigravity: (mcpServers) => setupJsonMergeTarget("antigravity", mcpServers),
+  "antigravity-cli": (mcpServers) => setupJsonMergeTarget("antigravity-cli", mcpServers),
+  cursor: (mcpServers) => setupJsonMergeTarget("cursor", mcpServers),
+  windsurf: (mcpServers) => setupJsonMergeTarget("windsurf", mcpServers),
   codex: setupCodexMcp,
-  kilo: setupKiloMcp,
+  kilo: (mcpServers) => setupJsonMergeTarget("kilo", mcpServers),
 };
 
 export async function setupMcp(activeMcpTargets: string[], mcpServers: Record<string, McpServer>) {
