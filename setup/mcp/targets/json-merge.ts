@@ -2,6 +2,7 @@ import type { McpTarget } from "../../../config/agents.config";
 import type { McpServer } from "../../../config/mcp.config";
 import {
   convertServerForAntigravity,
+  convertServerForClaudeCode,
   convertServerForCursor,
   convertServerForKilo,
   convertServerForVscode,
@@ -33,8 +34,6 @@ type JsonMergeTarget = {
   getPath: () => string;
   mergeKey: string;
   format: "json" | "jsonc";
-  // Omitted for claude-code: Claude Code expands ${VAR} itself, so servers
-  // are written through unconverted.
   convert?: (server: McpServer) => Record<string, unknown>;
   trailingNewline?: boolean;
 };
@@ -48,6 +47,7 @@ const jsonMergeTargets: Record<Exclude<McpTarget, "codex">, JsonMergeTarget> = {
     getPath: getClaudeCodeMcpPath,
     mergeKey: "mcpServers",
     format: "json",
+    convert: convertServerForClaudeCode,
   },
   vscode: {
     backupLabel: "VS Code MCP config",

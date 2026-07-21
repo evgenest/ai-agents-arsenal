@@ -18,6 +18,28 @@ export function convertServerForAntigravity(server: McpServer): JsonObject {
   };
 }
 
+// Claude Code's mcpServers schema has no "tools" field — it's a GitHub
+// Copilot / VS Code Copilot concept (and separately, an Agent SDK
+// programmatic-config field unrelated to the CLI's own config file). Claude
+// Code rejects the whole server entry if "tools" is present at all, so it
+// must be stripped. Everything else is passed through as-is: Claude Code
+// expands ${VAR} itself, so no env-var syntax conversion is needed either.
+export function convertServerForClaudeCode(server: McpServer): JsonObject {
+  if (isHttpServer(server)) {
+    return {
+      type: "http",
+      url: server.url,
+      headers: server.headers,
+    };
+  }
+
+  return {
+    command: server.command,
+    args: server.args,
+    env: server.env,
+  };
+}
+
 export function convertServerForVscode(server: McpServer): McpServer {
   if (isHttpServer(server)) {
     return {

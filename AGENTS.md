@@ -84,13 +84,13 @@ Before anything else, `ensureGlobalSkillsCliFresh()` runs once per invocation. I
 - `json.ts` — JSON / JSONC readers and JSONC parsing.
 - `files.ts` — backup creation and parent-directory setup.
 - `paths.ts` — global config path resolution per target.
-- `converters.ts` — server-shape conversion for Antigravity, VS Code, Cursor, Windsurf, and Kilo.
+- `converters.ts` — server-shape conversion for Claude Code, Antigravity, VS Code, Cursor, Windsurf, and Kilo.
 - `codex.ts` — TOML rendering and managed-section updates for Codex.
 - `server.ts` — shared server-shape helpers.
 
 **`setup/mcp/targets/`**:
 - `json-merge.ts` — one shared writer, `setupJsonMergeTarget(target, mcpServers)`, for every `McpTarget` except `codex`. All six follow the same recipe (read an existing JSON/JSONC file, merge converted servers into one top-level key, write it back with a timestamped backup), so the file-by-file differences — path, merge key, JSON vs JSONC, converter function, trailing newline, and the exact backup-log wording — live as data in a `jsonMergeTargets` registry (keyed by `McpTarget`) rather than as six near-identical files:
-  - `claude-code` — merges into the top-level `mcpServers` key of `~/.claude.json` ("user scope" — see https://code.claude.com/docs/en/mcp#user-scope). Not `~/.claude/settings.json`, which holds permissions/hooks/env, never MCP servers. No converter — Claude Code expands `${VAR}` itself.
+  - `claude-code` — merges into the top-level `mcpServers` key of `~/.claude.json` ("user scope" — see https://code.claude.com/docs/en/mcp#user-scope). Not `~/.claude/settings.json`, which holds permissions/hooks/env, never MCP servers. `${VAR}` is left as-is — Claude Code expands it itself — but `convertServerForClaudeCode()` strips `tools`: Claude Code's mcpServers schema has no such field and rejects the whole server entry if it's present (confirmed by testing — see the `tools` note below). Restricting which tools an MCP server exposes in Claude Code is done separately, via `mcp__<server>__<tool>` entries in `permissions.allow` (settings.json), not in the server config itself.
   - `vscode` — merges converted servers into the `servers` key of `%APPDATA%/Code/User/mcp.json`.
   - `antigravity` / `antigravity-cli` — merge converted servers into the `mcpServers` key of `~/.gemini/config/mcp_config.json`; both registry entries point at the same path/key/converter and only differ in the console-log label — see the `agents.config.ts` note on why IDE and CLI are still separate `McpTarget`s despite sharing a file.
   - `cursor` — merges converted servers into the `mcpServers` key of `~/.cursor/mcp.json`.
@@ -118,7 +118,10 @@ type McpServerStdio = {
   command: string;        // executable, typically "npx"
   args?: string[];        // package name and any positional args
   env?: Record<string, string>;  // env vars passed to the process
-  tools?: string[];       // optional tool filter (VSCode-specific)
+  tools?: string[];       // optional tool allowlist — supported by VS Code/GitHub Copilot's
+                           // mcp.json and rendered as Codex's `enabled_tools`; NOT valid in
+                           // Claude Code's own mcpServers schema (stripped for that target,
+                           // see json-merge.ts / converters.ts)
 };
 
 // HTTP transport
