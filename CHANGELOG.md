@@ -4,6 +4,20 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v6.1.1 - Claude Code rejected the `tools` field on MCP servers
+
+Release date: 2026-07-21
+
+Tag: `v6.1.1`
+
+Changes since `v6.1.0`:
+- `setup/mcp/core/converters.ts`: adds `convertServerForClaudeCode()`. The `claude-code` target had no converter — it wrote each `McpServer` into `~/.claude.json` unconverted, including the `tools` array. Claude Code's own `mcpServers` schema has no `tools` field and rejects the whole server entry if it's present (confirmed live: `claude mcp list` skipped the `exa` server with "invalid MCP server config for \"exa\": tools.0: expected object, received string"). `tools` is a VS Code/GitHub Copilot `mcp.json` concept, also rendered as `enabled_tools` for Codex — never a Claude Code one. The new converter strips `tools` and otherwise passes the server through unchanged, leaving `${VAR}` references as-is since Claude Code expands those itself
+- `setup/mcp/targets/json-merge.ts`: registers `convertServerForClaudeCode` as the `claude-code` target's converter
+- `AGENTS.md`: corrects the `tools` field docs (previously mislabeled "VSCode-specific" without explaining it breaks Claude Code) and notes that restricting which tools an MCP server exposes in Claude Code is done via `mcp__<server>__<tool>` entries in `permissions.allow` (settings.json), not the server config
+
+Net effect:
+- running this tool's Claude Code MCP setup with any server that declares `tools` (e.g. the built-in `exa` entry) no longer breaks that server in Claude Code — it now loads correctly instead of being skipped with a validation error
+
 ## v6.1.0 - Real Claude Code MCP path, and one shared writer for JSON-merge targets
 
 Release date: 2026-07-21
