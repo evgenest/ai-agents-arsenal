@@ -8,8 +8,13 @@ export function getAppDataDir(): string {
       : join(homedir(), ".config"));
 }
 
-export function getClaudeCodeSettingsPath(): string {
-  return join(homedir(), ".claude", "settings.json");
+// Claude Code doesn't read MCP servers from ~/.claude/settings.json (that
+// file is for permissions/hooks/env, not MCP) — user-scoped MCP servers
+// (available across all projects, matching every other target in this repo)
+// live in the top-level "mcpServers" key of ~/.claude.json instead. See
+// https://code.claude.com/docs/en/mcp#user-scope.
+export function getClaudeCodeMcpPath(): string {
+  return join(homedir(), ".claude.json");
 }
 
 export function getVscodeMcpPath(): string {

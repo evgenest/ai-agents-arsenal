@@ -89,7 +89,7 @@ Before anything else, `ensureGlobalSkillsCliFresh()` runs once per invocation. I
 - `server.ts` — shared server-shape helpers.
 
 **`setup/mcp/targets/`** — one writer per MCP target:
-- `claude-code.ts` — merges `mcpServers` into `~/.claude/settings.json`.
+- `claude-code.ts` — merges into the top-level `mcpServers` key of `~/.claude.json` ("user scope" — see https://code.claude.com/docs/en/mcp#user-scope). Not `~/.claude/settings.json`, which holds permissions/hooks/env, never MCP servers.
 - `vscode.ts` — merges converted servers into `%APPDATA%/Code/User/mcp.json`.
 - `antigravity.ts` — merges converted servers into `~/.gemini/config/mcp_config.json` via `setupAntigravityMcp()` (`antigravity` target) and `setupAntigravityCliMcp()` (`antigravity-cli` target), thin wrappers over one shared writer that only differ in the console-log label — see the `agents.config.ts` note on why IDE and CLI are still separate `McpTarget`s despite sharing a file.
 - `cursor.ts` — merges converted servers into `~/.cursor/mcp.json`.
@@ -97,7 +97,7 @@ Before anything else, `ensureGlobalSkillsCliFresh()` runs once per invocation. I
 - `codex.ts` — writes managed `[mcp_servers.*]` entries into `~/.codex/config.toml`.
 - `kilo.ts` — merges converted servers into `~/.config/kilo/kilo.jsonc`.
 
-Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each target writer converts them to the format that agent expects. Examples: VS Code and Windsurf use `${env:VAR}`, Antigravity resolves `${VAR}` to concrete values while writing `mcp_config.json` (no env-var substitution syntax of its own), Codex uses `env_vars` / `env_http_headers`, and Kilo uses `{env:VAR}`. For Exa specifically, the HTTP server definition uses the `Authorization: Bearer ${EXA_API_KEY}` header shape.
+Env var references still use `${VAR}` syntax in `config/mcp.config.ts`, and each target writer converts them to the format that agent expects. Examples: Claude Code keeps `${VAR}` as-is (it expands the same syntax at runtime, per its own docs — no conversion needed), VS Code and Windsurf use `${env:VAR}`, Antigravity resolves `${VAR}` to concrete values while writing `mcp_config.json` (no env-var substitution syntax of its own), Codex uses `env_vars` / `env_http_headers`, and Kilo uses `{env:VAR}`. For Exa specifically, the HTTP server definition uses the `Authorization: Bearer ${EXA_API_KEY}` header shape.
 
 ### Config Layer (`config/`)
 
@@ -129,7 +129,7 @@ type McpServerHttp = {
 };
 ```
 
-All env var values use `${VAR_NAME}` syntax. These are kept as literal strings in `~/.claude/settings.json` (Claude Code expands them at runtime from the system environment). When writing `.vscode/mcp.json`, the setup script converts them to `${env:VAR_NAME}`.
+All env var values use `${VAR_NAME}` syntax. These are kept as literal strings in `~/.claude.json` (Claude Code expands them at runtime from the system environment — same `${VAR}` syntax, per its own docs). When writing `.vscode/mcp.json`, the setup script converts them to `${env:VAR_NAME}`.
 
 Current Exa example in this repo:
 
@@ -146,7 +146,7 @@ exa: {
 
 | File | Written by | Contents |
 |---|---|---|
-| `~/.claude/settings.json` | `setupClaudeCodeMcp()` | `mcpServers` key merged in |
+| `~/.claude.json` (top-level `mcpServers`) | `setupClaudeCodeMcp()` | `mcpServers` key merged in ("user scope") |
 | `%APPDATA%/Code/User/mcp.json` | `setupVscodeMcp()` | `servers` key, VSCode format, global |
 | `~/.gemini/config/mcp_config.json` | `setupAntigravityMcp()` / `setupAntigravityCliMcp()` | `mcpServers` key merged in |
 | `~/.cursor/mcp.json` | `setupCursorMcp()` | `mcpServers` key merged in |

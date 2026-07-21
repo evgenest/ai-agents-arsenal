@@ -9,7 +9,7 @@ export async function setupVscodeMcp(mcpServers: Record<string, McpServer>) {
   ensureParentDir(mcpJsonPath);
 
   const backup = await backupIfExists(mcpJsonPath);
-  if (backup) console.log(`Existing mcp.json backed up to ${backup}`);
+  if (backup) console.log(`Existing VS Code MCP config backed up to ${backup}`);
 
   const existing = await readJsonObject(mcpJsonPath);
   const existingServers = (existing.servers as JsonObject | undefined) ?? {};
