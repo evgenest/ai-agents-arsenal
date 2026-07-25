@@ -19,7 +19,12 @@ For the historical evolution of the project from version to version, see [CHANGE
 | `TAVILY_API_KEY` | [Tavily](https://tavily.com) |
 | `CONTEXT7_API_KEY` | [Context7](https://context7.com) |
 | `EXA_API_KEY` | [Exa](https://exa.ai) — sent to the Exa MCP endpoint as `Authorization: Bearer ${EXA_API_KEY}` |
-| `MAGIC_API_KEY` | [21st.dev Magic](https://21st.dev) |
+
+`MAGIC_API_KEY` ([21st.dev Magic](https://21st.dev)) isn't provisioned by this tool — it's not worth standing up in every session. Run it on demand instead:
+
+```bash
+npx -y @21st-dev/magic@latest API_KEY="$MAGIC_API_KEY"
+```
 
 **Windows** — Win + R → `sysdm.cpl` → Advanced → Environment Variables → System variables
 
@@ -152,7 +157,8 @@ Project-scope installs (`--project`) have no shared canonical store to reuse acr
 | `tavily` | stdio | Web search |
 | `context7` | stdio | Library documentation |
 | `exa` | HTTP | Web search & fetch |
-| `21st-magic` | stdio | UI component generation |
+
+`21st-magic` (UI component generation) is deliberately excluded — run it manually when needed (see the `MAGIC_API_KEY` note above).
 
 ## Where Configs Are Written
 

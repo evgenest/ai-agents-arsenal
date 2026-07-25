@@ -18,7 +18,12 @@ export type McpServer = McpServerStdio | McpServerHttp;
 // The setup script auto-converts these to ${env:VAR} when writing .vscode/mcp.json.
 // For npx-based MCP servers, put "-y" first to suppress interactive install prompts.
 // Set the following env vars in your system before running:
-//   TAVILY_API_KEY, CONTEXT7_API_KEY, EXA_API_KEY, MAGIC_API_KEY
+//   TAVILY_API_KEY, CONTEXT7_API_KEY, EXA_API_KEY
+//
+// 21st.dev Magic (UI component generation) is intentionally not provisioned
+// here — it's heavy enough to matter on a low-RAM box, so run it on demand
+// instead of standing it up in every session:
+//   npx -y @21st-dev/magic@latest API_KEY="$MAGIC_API_KEY"
 export const mcpServers: Record<string, McpServer> = {
   tavily: {
     command: "npx",
@@ -35,9 +40,5 @@ export const mcpServers: Record<string, McpServer> = {
     url: "https://mcp.exa.ai/mcp",
     headers: { Authorization: "Bearer ${EXA_API_KEY}" },
     tools: ["web_search_exa", "web_fetch_exa"],
-  },
-  "21st-magic": {
-    command: "npx",
-    args: ["-y", "@21st-dev/magic@latest", 'API_KEY="${MAGIC_API_KEY}"'],
   },
 };

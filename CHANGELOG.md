@@ -4,6 +4,19 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v6.1.2 - Stop provisioning 21st.dev Magic by default
+
+Release date: 2026-07-25
+
+Tag: `v6.1.2`
+
+Changes since `v6.1.1`:
+- `config/mcp.config.ts`: removes the `21st-magic` entry from the provisioned `mcpServers` record. Its `npm exec @21st-dev/magic` process was found idling as one of the top CPU/RAM consumers on a 2-core/3.8GB box, standing in every session whether or not it was actually in use. A comment in its place documents the manual on-demand command (`npx -y @21st-dev/magic@latest API_KEY="$MAGIC_API_KEY"`)
+- `README.md`: drops the `21st-magic` row from the MCP servers table and the `MAGIC_API_KEY` row from the env var table, replacing both with a note pointing at the manual command
+
+Net effect:
+- fresh and existing `bunx @evgenest/ai-agents-arsenal` runs no longer write a `21st-magic` entry into any target's MCP config (Claude Code, VS Code, Cursor, Antigravity, Windsurf, Kilo, Codex) — run it by hand when actually needed instead of paying its idle cost every session. Targets where it was already provisioned by a prior run keep that stale entry until removed by hand, since this tool's JSON-merge writer only adds/updates keys, never deletes them
+
 ## v6.1.1 - Claude Code rejected the `tools` field on MCP servers
 
 Release date: 2026-07-21
