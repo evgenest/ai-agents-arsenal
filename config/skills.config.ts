@@ -155,4 +155,13 @@ export const skillsConfig = [
     repo: "vercel-labs/vercel-plugin",
     skills: ["vercel-agent"],
   },
+  {
+    // Same repo as the GitHits Claude Code plugin, but a different thing: the
+    // plugin (installed via /plugin, sourced from ./plugins/claude) ships
+    // `onboarding` and `search` as githits:*, while the repo's top-level
+    // skills/ directory carries standalone skills the plugin doesn't include.
+    // So this is not a duplicate of the plugin — installing both is correct.
+    repo: "githits-com/githits-cli",
+    skills: ["githits-mcp"],
+  },
 ];

@@ -135,6 +135,7 @@ This repository-local pattern applies to skills. MCP configuration remains machi
 | `resend-design-skills` | resend/design-skills |
 | `note-taking` | seb1n/awesome-ai-agent-skills |
 | `vercel-agent` | vercel-labs/vercel-plugin |
+| `githits-mcp` | githits-com/githits-cli — the repo's top-level `skills/`, not the Claude Code plugin built from `plugins/claude/` (that one ships `githits:onboarding`/`githits:search` instead, so the two don't overlap) |
 
 Global skill files are installed via the [`skills`](https://www.npmjs.com/package/skills) npm package (`bunx skills add` / `bunx skills update`). `ai-agents-arsenal` treats Claude Code's own global skills directory (`~/.claude/skills/`, from the `claude-code` entry in [`config/agents.config.ts`](config/agents.config.ts)) as the canonical store, and never delegates agent-specific symlinking to the `skills` CLI's own `-a` targeting — instead:
 

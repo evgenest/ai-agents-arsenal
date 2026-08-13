@@ -4,6 +4,19 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v6.2.1 - Track githits-mcp in the manifest
+
+Release date: 2026-08-13
+
+Tag: `v6.2.1`
+
+Changes since `v6.2.0`:
+- `config/skills.config.ts`: adds `githits-mcp` from `githits-com/githits-cli`. The skill had been kept as a hand-copied directory in a personal dotfiles repo, on the assumption that it came from the GitHits Claude Code plugin and so couldn't be installed the normal way. It can: the repo's top-level `skills/` directory carries it as a standalone skill that `skills add` resolves like any other. The entry carries a comment explaining why this is *not* a duplicate of the plugin — the plugin is built from `plugins/claude/` and ships `githits:onboarding` and `githits:search`, a disjoint set, so installing both is correct
+- `README.md`: adds the matching row to the skill tables, spelling out the plugin/standalone distinction so the entry doesn't later look like a mistake
+
+Net effect:
+- one more skill is restored from the manifest instead of surviving only as a copy on one machine — the general rule this project exists for ("anything installable from a public repo belongs in the manifest, not in git") now holds with no exceptions
+
 ## v6.2.0 - Catch skills that silently never installed
 
 Release date: 2026-08-13
