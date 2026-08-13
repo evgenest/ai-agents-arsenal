@@ -186,7 +186,18 @@ async function setupGlobalSkills(
     const skillArgs = entry.skills.flatMap((s) => ["--skill", s]);
     try {
       await $`bunx skills add ${entry.repo} ${skillArgs} -g -a ${CANONICAL_STORE_AGENT_ID} -y`;
-      installedSkills.push(...entry.skills);
+      const { installed, missing } = await verifyInstalled(entry.skills, skillsStore);
+      installedSkills.push(...installed);
+      if (missing.length > 0) {
+        failures.push({
+          repo: entry.repo,
+          skills: missing,
+          error: `\`skills add\` reported success but installed nothing for these names.\n`
+            + `The source repo doesn't carry them under those names — upstream most likely\n`
+            + `renamed or removed them. Check the repo's current skill list and update\n`
+            + `config/skills.config.ts.`,
+        });
+      }
     } catch (err: unknown) {
       failures.push({ repo: entry.repo, skills: entry.skills, error: describeError(err) });
     }
@@ -308,6 +319,36 @@ async function installPinnedSkillToProject(
   } finally {
     await rm(tmpRoot, { recursive: true, force: true });
   }
+}
+
+/**
+ * Splits requested skill names by whether they actually landed in the store.
+ *
+ * `skills add` exits 0 even when it installed only *some* of what was asked
+ * for: a `--skill` name the source repo doesn't carry is dropped from the
+ * selection without a warning, a non-zero exit, or anything else that
+ * distinguishes it from a clean run. That happens routinely — upstream repos
+ * rename and reorganize skills — and taking the exit code at face value means
+ * a skill silently disappears from the machine while the summary still claims
+ * it was installed. Observed with `sandbox-sdk` (split into sandbox-stable /
+ * sandbox-next) and three `convex-*` skills renamed in the same week. So
+ * confirm against the filesystem instead: a skill exists only if its SKILL.md
+ * does, since that's exactly what Claude Code itself requires to see it.
+ */
+async function verifyInstalled(
+  names: string[],
+  skillsStore: string,
+): Promise<{ installed: string[]; missing: string[] }> {
+  const installed: string[] = [];
+  const missing: string[] = [];
+  for (const name of names) {
+    if (await pathExists(join(skillsStore, name, "SKILL.md"))) {
+      installed.push(name);
+    } else {
+      missing.push(name);
+    }
+  }
+  return { installed, missing };
 }
 
 async function pathExists(path: string): Promise<boolean> {

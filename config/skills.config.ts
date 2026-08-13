@@ -64,9 +64,13 @@ export const skillsConfig = [
     repo: "cloudflare/skills",
     skills: [
       "agents-sdk",
+      "cloudflare",
       "cloudflare-email-service",
       "durable-objects",
-      "sandbox-sdk",
+      // Was `sandbox-sdk`, which upstream split into sandbox-stable (the
+      // default npm tag) and sandbox-next (the 1.0 preview). Tracking the
+      // stable one; add sandbox-next alongside it when moving to 1.0.
+      "sandbox-stable",
       "turnstile-spin",
       "web-perf",
       "workers-best-practices",
@@ -108,14 +112,19 @@ export const skillsConfig = [
     skills: ["context7-mcp"],
   },
   {
+    // Upstream renamed several of these (the repo now ships 33 skills under
+    // shorter names): convex-migration-helper -> convex-migrate,
+    // convex-performance-audit -> convex-optimize, convex-setup-auth ->
+    // convex-auth. The old names install nothing — see the note in
+    // setup/skills.ts about the CLI silently dropping unknown --skill names.
     repo: "get-convex/agent-skills",
     skills: [
       "convex",
+      "convex-auth",
       "convex-create-component",
-      "convex-migration-helper",
-      "convex-performance-audit",
+      "convex-migrate",
+      "convex-optimize",
       "convex-quickstart",
-      "convex-setup-auth",
     ],
   },
   {
