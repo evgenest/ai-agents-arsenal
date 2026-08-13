@@ -4,6 +4,21 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v6.2.0 - Catch skills that silently never installed
+
+Release date: 2026-08-13
+
+Tag: `v6.2.0`
+
+Changes since `v6.1.2`:
+- `setup/skills.ts`: adds `verifyInstalled()`, and `setupGlobalSkills()` now runs every `skills add` result through it instead of assuming the requested names landed. `skills add` exits **0** even when it installed only some of the `--skill` names passed to it — a name the source repo doesn't carry is dropped from the selection with no warning, no non-zero exit, and nothing else separating it from a clean run. The check is done against the filesystem (`<store>/<skill>/SKILL.md` must exist, which is exactly what Claude Code itself requires to see a skill), and anything missing is reported as a failure naming the skills, the repo, and the likely cause
+- `config/skills.config.ts`: fixes four skill names that had been lost exactly that way, plus one that was never declared. Upstream split `sandbox-sdk` (cloudflare/skills) into `sandbox-stable` (tracked here, the default npm tag) and `sandbox-next` (the 1.0 preview); get-convex/agent-skills renamed `convex-migration-helper` → `convex-migrate`, `convex-performance-audit` → `convex-optimize`, and `convex-setup-auth` → `convex-auth` in the same reorganization. Also adds `cloudflare`, which was installed on the machine but absent from the manifest, so a reinstall would have silently dropped it
+- `README.md`: documents the new verification as its own reason the package exists rather than being a thin `bunx skills add` wrapper, and updates the cloudflare/skills and get-convex/agent-skills rows in the skill tables
+
+Net effect:
+- a skill can no longer disappear from a machine while the run reports success. All four renamed skills above had been "installing" cleanly for weeks while putting nothing on disk, and nothing in the output or exit code revealed it — upstream repos rename and reorganize skills routinely, so this was a recurring silent shrink of the installed set, not a one-off
+- the manifest again matches what actually gets installed, so a fresh machine restores the full skill set instead of a quietly reduced one
+
 ## v6.1.2 - Stop provisioning 21st.dev Magic by default
 
 Release date: 2026-07-25
