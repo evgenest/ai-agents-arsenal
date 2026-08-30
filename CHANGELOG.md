@@ -4,6 +4,19 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v6.2.2 - Track the anthropics/skills pdf skill
+
+Release date: 2026-08-30
+
+Tag: `v6.2.2`
+
+Changes since `v6.2.1`:
+- `config/skills.config.ts`: adds `pdf` to the existing `anthropics/skills` entry, alongside `frontend-design` and `skill-creator`
+- `README.md`: adds `pdf` to the matching row in the skill table
+
+Net effect:
+- reading, extracting, merging, splitting, watermarking, form-filling, encrypting, and OCR'ing PDFs is now available as a tracked skill instead of a one-off manual install
+
 ## v6.2.1 - Track githits-mcp in the manifest
 
 Release date: 2026-08-13

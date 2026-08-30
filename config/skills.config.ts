@@ -31,7 +31,7 @@ export const skillsConfig = [
   },
   {
     repo: "anthropics/skills",
-    skills: ["frontend-design", "skill-creator"],
+    skills: ["frontend-design", "pdf", "skill-creator"],
   },
   {
     // Vercel plans to fold these skills into Next.js itself starting at

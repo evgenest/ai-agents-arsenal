@@ -115,7 +115,7 @@ This repository-local pattern applies to skills. MCP configuration remains machi
 | `brainstorming`, `dispatching-parallel-agents`, `executing-plans`, `finishing-a-development-branch`, `receiving-code-review`, `requesting-code-review`, `subagent-driven-development`, `systematic-debugging`, `test-driven-development`, `using-superpowers`, `verification-before-completion`, `writing-plans`, `writing-skills` | obra/superpowers |
 | `create-agentsmd`, `git-commit`, `prd` | github/awesome-copilot |
 | `find-skills` | vercel-labs/skills |
-| `frontend-design`, `skill-creator` | anthropics/skills |
+| `frontend-design`, `pdf`, `skill-creator` | anthropics/skills |
 | `next-best-practices` | vercel-labs/next-skills, pinned to [a commit](https://github.com/vercel-labs/next-skills/tree/dc1de9caf7612d73f56a8dec3cb1bd6c9ec096b9/skills/next-best-practices) — see below |
 | `shadcn` | shadcn/ui |
 | `vercel-composition-patterns`, `vercel-react-best-practices`, `web-design-guidelines` | vercel-labs/agent-skills |
