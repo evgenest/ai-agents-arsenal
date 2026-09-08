@@ -4,6 +4,20 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v6.2.3 - Drop the retired next-best-practices pin
+
+Release date: 2026-09-08
+
+Tag: `v6.2.3`
+
+Changes since `v6.2.2`:
+- `config/skills.config.ts`: removes the pinned `vercel-labs/next-skills` entry and its `pin: { ref, path }` block. The pin existed because the skill had vanished from that repo's default branch while Vercel folded it into Next.js itself, expected at v16.3.0. That has now happened: `main` is a three-file "skills moved" pointer, the remaining workflow skills live in `vercel/next.js/skills`, and `next-best-practices` is not among them — its content ships as bundled docs (`next/dist/docs/`) plus the `AGENTS.md`/`CLAUDE.md` that `next dev` generates on Next.js 16.3+, so there is nothing left to install
+- `README.md`: drops the skill's row from the skill table, and rewrites the `pin` rationale so it reads as a still-supported capability with its original case now resolved, rather than describing a pin the manifest no longer carries
+
+Net effect:
+- the manifest no longer fetches a frozen mid-2026 copy of a skill that upstream has retired, so a fresh machine stops inheriting Next.js guidance that can only drift further from the framework
+- the `pin` mechanism itself is untouched in `setup/skills.ts`, `setup/config.ts`, and `AGENTS.md` — no entry uses it right now, but the next skill that disappears from a default branch can still be pinned without rebuilding it
+
 ## v6.2.2 - Track the anthropics/skills pdf skill
 
 Release date: 2026-08-30
