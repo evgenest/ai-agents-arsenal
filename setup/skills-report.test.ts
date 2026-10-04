@@ -37,7 +37,7 @@ describe("runWithReport", () => {
   const originalExitCode = process.exitCode;
 
   afterEach(async () => {
-    process.exitCode = originalExitCode;
+    process.exitCode = originalExitCode ?? 0;
     if (dir) await rm(dir, { recursive: true, force: true });
   });
 
