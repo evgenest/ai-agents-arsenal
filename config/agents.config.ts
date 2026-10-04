@@ -20,8 +20,8 @@ export type McpTarget =
 // (https://antigravity.google/docs/mcp).
 export const agentsConfig = [
   { id: "claude-code",     enabled: true,  mcpTargets: ["claude-code"], skillsPath: "~/.claude/skills" },
-  { id: "cursor",          enabled: true,  mcpTargets: ["cursor"], skillsPath: "~/.cursor/skills" },
-  { id: "antigravity-cli", enabled: true,  mcpTargets: ["antigravity-cli"], skillsPath: "~/.gemini/antigravity-cli/skills" },
+  { id: "cursor",          enabled: false, mcpTargets: ["cursor"], skillsPath: "~/.cursor/skills" },
+  { id: "antigravity-cli", enabled: false, mcpTargets: ["antigravity-cli"], skillsPath: "~/.gemini/antigravity-cli/skills" },
   { id: "hermes-agent",    enabled: false, mcpTargets: [], skillsPath: "~/.hermes/skills" },
 ] as const;
 

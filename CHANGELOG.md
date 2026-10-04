@@ -4,6 +4,19 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v6.3.1 - Claude Code is the only enabled agent
+
+Release date: 2026-10-04
+
+Tag: `v6.3.1`
+
+Changes since `v6.3.0`:
+- `config/agents.config.ts`: `cursor` and `antigravity-cli` are now `enabled: false`, leaving `claude-code` as the only active agent. Both harnesses were removed from the machine this package manages, so the default config no longer recreates their skills symlink dirs (`~/.cursor/skills`, `~/.gemini/antigravity-cli/skills`) or writes their MCP configs (`~/.cursor/mcp.json`, `~/.gemini/config/mcp_config.json`) on every run
+
+Net effect:
+- skills and MCP setup touch only Claude Code's own paths; turning another agent back on is still a one-line `enabled: true` (its `skillsPath` and `mcpTargets` stay in the config)
+- disabling an agent does not delete what earlier runs created for it — those dirs and config files have to be removed by hand
+
 ## v6.3.0 - Machine-readable skills report (`--report`)
 
 Release date: 2026-10-04
