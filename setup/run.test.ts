@@ -60,3 +60,30 @@ describe("resolveSetupSelection", () => {
     expect(() => resolveSetupSelection(["--wat"])).toThrow("Unknown argument: --wat");
   });
 });
+
+describe("--report", () => {
+  test("accepts --report <path> and --report=<path> with --skills", () => {
+    expect(resolveSetupSelection(["--skills", "--report", "/tmp/r.json"])).toEqual({
+      runSkills: true,
+      runMcp: false,
+      skillsInstallScope: "global",
+      configPaths: {},
+      dryRun: false,
+      reportPath: "/tmp/r.json",
+    });
+    expect(resolveSetupSelection(["--skills", "--report=/tmp/r.json"]).reportPath).toBe("/tmp/r.json");
+  });
+
+  test("throws when the value is missing", () => {
+    expect(() => resolveSetupSelection(["--skills", "--report"])).toThrow("Missing value for --report");
+    expect(() => resolveSetupSelection(["--skills", "--report="])).toThrow("Missing value for --report");
+    expect(() => resolveSetupSelection(["--report", "--skills"])).toThrow("Missing value for --report");
+  });
+
+  test("only applies to an actual global skills run", () => {
+    expect(() => resolveSetupSelection(["--report", "r.json"])).toThrow("--report requires --skills");
+    expect(() => resolveSetupSelection(["--skills", "--mcp", "--report", "r.json"])).toThrow("--report requires --skills");
+    expect(() => resolveSetupSelection(["--skills", "--project", "--report", "r.json"])).toThrow("--project");
+    expect(() => resolveSetupSelection(["--skills", "--dry-run", "--report", "r.json"])).toThrow("--dry-run");
+  });
+});

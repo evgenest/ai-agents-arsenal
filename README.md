@@ -89,6 +89,35 @@ bun run index.ts --mcp --agents-config ./my-config/agents.config.ts --mcp-config
 bunx @evgenest/ai-agents-arsenal --skills --project --agents-config ./ai/agents.config.ts --skills-config ./ai/skills.config.ts
 ```
 
+To get a machine-readable result of the global skills phase instead of console output (for wrappers that should show only what changed):
+
+```bash
+bunx @evgenest/ai-agents-arsenal --skills --report ./skills-report.json
+```
+
+With `--report <path>` (or `--report=<path>`) the preview and per-skill output are skipped, every `skills` CLI call runs captured, and one summary line is printed. The JSON written to `<path>` looks like this:
+
+```jsonc
+{
+  "version": 1,
+  "cli": { "before": "1.7.0", "after": "1.7.1", "error": null },   // global `skills` CLI refresh
+  "skills": [
+    { "name": "find-skills", "repo": "vercel-labs/skills", "status": "updated", "oldHash": "…", "newHash": "…" },
+    { "name": "gone-skill", "repo": "owner/repo", "status": "failed", "error": "No matching skill found in source …" }
+  ],
+  "errors": [],        // failures not tied to one skill, full text
+  "transcript": "…"    // all captured child output, ANSI stripped
+}
+```
+
+`status` is `updated` (the lockfile's `skillFolderHash` changed), `installed` (new this run, i.e. not on disk before), `unchanged`, `pinned` (a `pin` entry already present), or `failed` (with the full `error`). A non-failed skill can also carry a `note`, for example when a failed `skills update` was recovered by a direct `skills add` retry. The exit code is 1 when any skill failed or `errors` is non-empty.
+
+Problems the `skills` CLI reports without a non-zero exit are not lost:
+- A `Warning:` block from `skills update` (a skill deleted upstream, several current paths matching one skill) or its "N skill(s) cannot be checked automatically" list goes into `errors` in full, and every configured skill it names is `failed`.
+- An installed skill that `skills update` can't check at all (no lockfile entry, or one without a folder hash or skill path, which the CLI skips silently) is `failed`, with the `skills add` command that makes it trackable again, plus one entry in `errors`.
+- If `skills list` fails, every skill is re-added. A skill that was already on disk is then reported by its lockfile hash (`updated`/`unchanged`), not as `installed`, and a failed re-add is `failed` even though the old copy is still there.
+- If the installed `skills` CLI is a different major version than the one this release was tested with (`TESTED_SKILLS_CLI_MAJOR` in `setup/skills-cli.ts`), `errors` says so. Normal mode prints the same text as a `⚠` warning and carries on. The report is written even if the run throws, and if it can't be written the command exits non-zero. `--report` needs `--skills` and works only for global installs, so it can't be combined with `--mcp`, `--project`, or `--dry-run`.
+
 If you do not pass custom config flags, the CLI prints a preflight summary before making changes. That preview shows which skills or MCP servers will be installed, which built-in config files are being used, links to the matching config files from the current package release, and the override flags you can use next time.
 
 ## Cloud Agent Use
@@ -147,7 +176,7 @@ This is the actual reason `ai-agents-arsenal` exists as its own package instead 
 2. **One config, one command.** `skills add` only installs from a single repo per invocation. `config/skills.config.ts` lets you write down every skill you actually use, across as many source repos as you like, once — and install or update all of it with a single command instead of running `skills add` once per repository.
 3. **Pinning a skill to a fixed commit.** Sometimes a skill disappears from a repo's default branch before its replacement ships — `vercel-labs/next-skills` emptied its `main` branch this way while `next-best-practices` was being folded into Next.js itself (it now ships as bundled docs plus the `AGENTS.md`/`CLAUDE.md` that `next dev` generates on 16.3+, so no entry here currently needs a pin). The `skills` CLI can't be pointed at an arbitrary commit to work around that for every repo: for fast-pathed owners like `vercel-labs` it fetches the packaged skill from Vercel's own hosted download API by slug — which ignores any ref you pass — and only falls back to `git clone --branch <ref>`, which only resolves real branch/tag names, never a raw SHA. `config/skills.config.ts` entries can set an optional `pin: { ref, path }` so that one entry bypasses `skills add` entirely and is fetched straight from that commit's GitHub tarball instead, then installed the same way as everything else.
 4. **Catching a skill that silently didn't install.** `skills add` exits 0 even when it installed only *some* of the names passed to it: a `--skill` the source repo doesn't carry is dropped from the selection with no warning and no non-zero exit. Upstream repos rename and reorganize skills regularly, so this is not a rare edge case — `sandbox-sdk` in `cloudflare/skills` was split into `sandbox-stable`/`sandbox-next`, and three `convex-*` skills were renamed in the same week, all of which kept "installing" successfully while putting nothing on disk. `setup/skills.ts` therefore checks the filesystem after every `add` instead of trusting the exit code: a skill counts as installed only if its `SKILL.md` is actually in the store, which is exactly what Claude Code itself requires to see it. Anything missing is reported as a failure naming the skills and the repo, so a rename surfaces immediately instead of quietly shrinking the skill set.
-5. **Fast, and kept fresh, via a global bun install of `skills` itself.** Every command here runs through `bunx skills ...`. When `skills` is already installed globally via bun (`bun add -g skills`), `bunx` resolves and runs it directly with no registry round-trip at all — verified by testing with the registry made deliberately unreachable, which still resolved instantly as long as a global install was present. Without one, every unpinned `bunx skills ...` call re-resolves against the registry from scratch, and this file makes several per run. (Vercel's own `skills` README only documents installing via `npx skills ...`, which is entirely reasonable — no single README can cover every package manager.) So `setup/skills.ts` runs one `bun add -g skills` / `bun update -g skills` at the start of every invocation: installs it globally the first time (so every later call, this run and future ones, skips the round-trip), then just keeps it current on every run after that — `bunx` never checks that on its own, so a global copy would otherwise go stale indefinitely. The update path deliberately skips `--latest`, so it only takes patch/minor releases within the already-accepted `^x.y.z` range and never jumps across a major version or onto an unvetted `latest` dist-tag release; a first-time install has no prior range to respect, so it takes whatever the registry's `latest` tag is, same as any other fresh install.
+5. **Fast, and kept fresh, via a global bun install of `skills` itself.** Every command here runs through `bunx skills ...`. When `skills` is already installed globally via bun (`bun add -g skills`), `bunx` resolves and runs it directly with no registry round-trip at all — verified by testing with the registry made deliberately unreachable, which still resolved instantly as long as a global install was present. Without one, every unpinned `bunx skills ...` call re-resolves against the registry from scratch, and this file makes several per run. (Vercel's own `skills` README only documents installing via `npx skills ...`, which is entirely reasonable — no single README can cover every package manager.) So `setup/skills.ts` runs one `bun add -g skills` / `bun update -g skills` at the start of every invocation: installs it globally the first time (so every later call, this run and future ones, skips the round-trip), then just keeps it current on every run after that — `bunx` never checks that on its own, so a global copy would otherwise go stale indefinitely. The update path deliberately skips `--latest`, so it only takes patch/minor releases within the already-accepted `^x.y.z` range and never jumps across a major version or onto an unvetted `latest` dist-tag release; a first-time install has no prior range to respect, so it takes whatever the registry's `latest` tag is, same as any other fresh install. A failure in this step doesn't stop the run, but it is not swallowed either. Normal mode prints a warning with the full error, and `--report` records it as `cli.error` together with the version before and after. "Up to date" is printed only when the version really didn't move.
 
 Project-scope installs (`--project`) have no shared canonical store to reuse across agents, so regular entries still delegate directly to the `skills` CLI's own per-agent `-a` targeting. Pinned entries can't reuse that either — a *local path* source (which a pinned commit's extracted tarball is) only reliably installs to the first `-a` target passed to a single `skills add` call in this CLI, so `setup/skills.ts` installs pinned skills to each active agent's project directory one `skills add` call at a time instead.
 
@@ -193,6 +222,7 @@ You can also choose which setup phase to run without changing agent config:
 - `bun run index.ts --mcp` runs only MCP config generation
 - `bun run index.ts --skills --project` installs skills into the current project instead of using `-g`
 - `bun run index.ts --dry-run` prints the setup preview and exits without making changes
+- `bun run index.ts --skills --report ./skills-report.json` runs the global skills phase quietly and writes a JSON report of what was updated, installed, or failed (see [Quick Start](#3-clone-the-repo-if-you-want-to-customize-the-defaults))
 - `bun run index.ts --agents-config ./my-config/agents.config.ts --skills-config ./my-config/skills.config.ts` installs skills from custom config files
 - `bun run index.ts --agents-config ./my-config/agents.config.ts --mcp-config ./my-config/mcp.config.ts` writes MCP config from custom config files
 
@@ -259,6 +289,15 @@ index.ts                  # Entry point — orchestrates setup
 setup/
   run.ts                  # Parses CLI flags and runs selected setup phases
   skills.ts               # Installs skills via bunx for active agents
+  skills-cli.ts           # Installs/updates the global `skills` CLI, reports before/after/error
+  skills-report.ts        # --report contract, `add --json` parsing, report writing
+  skills-report-run.ts    # --report flow: captured global skills setup
+  skills-report-update.ts # --report: `skills update` path (uncheckable skills, warnings, retries)
+  skills-report-exec.ts   # --report: captured `bunx skills` calls (list/add)
+  skills-add-result.ts    # --report: status of a skill that went through `skills add`
+  skills-update-output.ts # Parses `skills update` status lines and warning blocks
+  skills-lock.ts          # Reads/diffs the `skills` CLI lockfile; which entries `update` can check
+  errors.ts               # ANSI stripping and error-text helpers
   mcp.ts                  # Thin MCP orchestrator and public setup exports
   mcp/
     core/                 # Shared path/env/json/transform helpers

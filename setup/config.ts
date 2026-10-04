@@ -90,7 +90,7 @@ const SUPPORTED_MCP_TARGETS = new Set<McpTarget>([
 ]);
 
 export async function loadSetupConfig(overrides: ConfigPathOverrides = {}): Promise<LoadedSetupConfig> {
-  const packageVersion = await readPackageVersion();
+  const packageVersion = await readArsenalVersion();
   const sources = {
     agents: resolveConfigSource(DEFAULT_CONFIG_FILES.agents, overrides.agentsConfigPath, CONFIG_FLAGS.agents, packageVersion),
     skills: resolveConfigSource(DEFAULT_CONFIG_FILES.skills, overrides.skillsConfigPath, CONFIG_FLAGS.skills, packageVersion),
@@ -132,7 +132,8 @@ export async function loadSetupConfig(overrides: ConfigPathOverrides = {}): Prom
   };
 }
 
-async function readPackageVersion(): Promise<string> {
+/** This package's own version, from its package.json. */
+export async function readArsenalVersion(): Promise<string> {
   const packageJson = await Bun.file(resolve(PACKAGE_ROOT, "package.json")).json() as { version?: unknown };
   if (typeof packageJson.version !== "string" || packageJson.version.length === 0) {
     throw new Error("package.json must contain a string version field");

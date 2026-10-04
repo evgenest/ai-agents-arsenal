@@ -2,11 +2,19 @@ import { cp, mkdir, mkdtemp, rm, stat, symlink, unlink } from "node:fs/promises"
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { $ } from "bun";
-import type { AgentConfigEntry, SkillsConfigEntry, SkillsPin } from "./config";
+import { readArsenalVersion, type AgentConfigEntry, type SkillsConfigEntry, type SkillsPin } from "./config";
+import { describeError } from "./errors";
+import { checkSkillsCliMajor, describeSkillsCliRefresh, refreshGlobalSkillsCli } from "./skills-cli";
+
+// Kept importable from here for existing callers/tests; they live in ./errors.
+export { describeError, extractErrorDetails, stripAnsi } from "./errors";
 
 export type SkillsInstallScope = "global" | "project";
 
 type Failure = { repo: string; skills: string[]; error: string };
+
+/** Line sink for progress output; defaults to the console, `--report` mode captures it instead. */
+export type LineLogger = (line: string) => void;
 
 /**
  * The agent whose own global skills directory doubles as our canonical
@@ -21,7 +29,7 @@ type Failure = { repo: string; skills: string[]; error: string };
  * assume is always configured, and its path is under our own control via
  * `agents.config.ts` rather than an upstream default we don't own.
  */
-const CANONICAL_STORE_AGENT_ID = "claude-code";
+export const CANONICAL_STORE_AGENT_ID = "claude-code";
 
 export async function setupSkills(
   agentsConfig: AgentConfigEntry[],
@@ -41,73 +49,18 @@ export async function setupSkills(
 }
 
 /**
- * Every command in this file runs the `skills` CLI through `bunx skills ...`.
- * `bunx` resolves a package that's already installed globally via bun
- * (`bun add -g skills`) directly, with no registry round-trip at all.
- * Without a global install, every unpinned `bunx skills ...` call — and
- * this file makes several per run (list, add, update, one per pinned
- * project-scope agent) — re-resolves against the registry from scratch, so
- * this function both installs `skills` globally on first use and, once
- * it's there, keeps it current:
- *
- * - Not yet a global bun package → `bun add -g skills` (one-time; every
- *   later `bunx skills` call in this and future runs then resolves
- *   instantly, with no registry round-trip).
- * - Already a global bun package → `bun update -g skills` (`bunx` never
- *   checks this on its own, so it would otherwise go stale indefinitely).
- *
- * Deliberately no `--latest` on the update path: that flag discards the
- * semver range recorded in `~/.bun/install/global/package.json` (`^x.y.z`
- * by default) and jumps straight to whatever npm's `latest` dist-tag
- * currently points to, which isn't necessarily a well-vetted release for
- * every package. Plain `bun update -g skills` stays within that
- * already-accepted range — patch and minor bumps only, no crossing a major
- * version, and no prereleases unless one was explicitly requested when the
- * range was first set. A fresh `bun add -g skills` has no prior range to
- * respect, so it takes whatever the registry's own `latest` tag is, same as
- * any other first-time install.
+ * Installs/updates the global `skills` CLI (see refreshGlobalSkillsCli for
+ * why) and prints the outcome. A failure, or a `skills` major this release
+ * wasn't verified against, doesn't stop the run, but it's printed as a
+ * warning rather than silently swallowed.
  */
 async function ensureGlobalSkillsCliFresh(): Promise<void> {
-  const existingPackageJsonPath = await resolveGlobalSkillsPackageJson();
-
-  try {
-    await $`bun ${existingPackageJsonPath ? "update" : "add"} -g skills`.quiet();
-  } catch {
-    // Offline, registry hiccup, etc. — `bunx skills` still works below, just
-    // without the speed-up (or with whatever was already installed).
-    return;
-  }
-
-  const packageJsonPath = existingPackageJsonPath ?? await resolveGlobalSkillsPackageJson();
-  const version = packageJsonPath ? await readPackageVersion(packageJsonPath) : null;
-  if (!version) {
-    return;
-  }
-
-  console.log(existingPackageJsonPath
-    ? `  ✓ Global \`skills\` CLI is up to date (v${version})`
-    : `  ✓ Installed \`skills\` CLI globally (v${version}) — future runs skip the registry round-trip`);
-}
-
-/** Path to the globally bun-installed `skills` package's package.json, or null if it isn't one. */
-async function resolveGlobalSkillsPackageJson(): Promise<string | null> {
-  try {
-    const result = await $`bun pm bin -g`.quiet();
-    const globalBinDir = result.stdout.toString().trim();
-    const packageJsonPath = join(globalBinDir, "..", "install", "global", "node_modules", "skills", "package.json");
-    return (await pathExists(packageJsonPath)) ? packageJsonPath : null;
-  } catch {
-    return null;
-  }
-}
-
-async function readPackageVersion(packageJsonPath: string): Promise<string | null> {
-  try {
-    const raw = await Bun.file(packageJsonPath).json() as { version?: unknown };
-    return typeof raw.version === "string" ? raw.version : null;
-  } catch {
-    return null;
-  }
+  const refresh = await refreshGlobalSkillsCli();
+  const { lines, warnings } = describeSkillsCliRefresh(refresh);
+  for (const line of lines) console.log(line);
+  for (const line of warnings) console.warn(line);
+  const untested = checkSkillsCliMajor(refresh, await readArsenalVersion());
+  if (untested) console.warn(`  ⚠ ${untested}`);
 }
 
 /**
@@ -152,30 +105,9 @@ async function setupGlobalSkills(
   activeAgents: AgentConfigEntry[],
   skillsConfig: SkillsConfigEntry[],
 ) {
-  const canonicalAgent = agentsConfig.find((a) => a.id === CANONICAL_STORE_AGENT_ID);
-  if (!canonicalAgent?.skillsPath) {
-    throw new Error(
-      `agents.config.ts must define a "${CANONICAL_STORE_AGENT_ID}" entry with a skillsPath — `
-      + `its global skills directory doubles as the canonical store for all other agents' symlinks.`,
-    );
-  }
-  const skillsStore = resolveHome(canonicalAgent.skillsPath);
-
-  const pinnedEntries = skillsConfig.filter(hasPin);
-  const regularEntries = skillsConfig.filter((e) => e.pin == null);
-
+  const skillsStore = resolveCanonicalStore(agentsConfig);
   const installed = await listInstalledGlobalSkills();
-
-  const toUpdate: string[] = [];
-  const toAdd: SkillsConfigEntry[] = [];
-  for (const entry of regularEntries) {
-    const missing = entry.skills.filter((s) => !installed.has(s));
-    const present = entry.skills.filter((s) => installed.has(s));
-    toUpdate.push(...present);
-    if (missing.length > 0) {
-      toAdd.push({ repo: entry.repo, skills: missing });
-    }
-  }
+  const { toAdd, toUpdate, pinnedEntries } = planGlobalSkills(skillsConfig, installed);
 
   const installedSkills: string[] = [];
   const updatedSkills: string[] = [];
@@ -243,7 +175,45 @@ async function setupGlobalSkills(
   });
 }
 
-function hasPin(entry: SkillsConfigEntry): entry is SkillsConfigEntry & { pin: SkillsPin } {
+/** Claude Code's global skills directory — the canonical store every other agent symlinks into. */
+export function resolveCanonicalStore(agentsConfig: AgentConfigEntry[]): string {
+  const canonicalAgent = agentsConfig.find((a) => a.id === CANONICAL_STORE_AGENT_ID);
+  if (!canonicalAgent?.skillsPath) {
+    throw new Error(
+      `agents.config.ts must define a "${CANONICAL_STORE_AGENT_ID}" entry with a skillsPath — `
+      + `its global skills directory doubles as the canonical store for all other agents' symlinks.`,
+    );
+  }
+  return resolveHome(canonicalAgent.skillsPath);
+}
+
+export type GlobalSkillsPlan = {
+  /** Missing skills, grouped per source repo, for `skills add`. */
+  toAdd: SkillsConfigEntry[];
+  /** Already-installed skill names, refreshed with one batched `skills update`. */
+  toUpdate: string[];
+  pinnedEntries: (SkillsConfigEntry & { pin: SkillsPin })[];
+};
+
+/** Splits the config into add / update / pinned work against what `skills list -g` reported. */
+export function planGlobalSkills(skillsConfig: SkillsConfigEntry[], installed: Set<string>): GlobalSkillsPlan {
+  const pinnedEntries = skillsConfig.filter(hasPin);
+  const regularEntries = skillsConfig.filter((e) => e.pin == null);
+
+  const toUpdate: string[] = [];
+  const toAdd: SkillsConfigEntry[] = [];
+  for (const entry of regularEntries) {
+    const missing = entry.skills.filter((s) => !installed.has(s));
+    const present = entry.skills.filter((s) => installed.has(s));
+    toUpdate.push(...present);
+    if (missing.length > 0) {
+      toAdd.push({ repo: entry.repo, skills: missing });
+    }
+  }
+  return { toAdd, toUpdate, pinnedEntries };
+}
+
+export function hasPin(entry: SkillsConfigEntry): entry is SkillsConfigEntry & { pin: SkillsPin } {
   return entry.pin != null;
 }
 
@@ -262,18 +232,30 @@ function hasPin(entry: SkillsConfigEntry): entry is SkillsConfigEntry & { pin: S
  * branch/tag names, never a raw commit SHA. Fetching the tarball ourselves
  * sidesteps both.
  */
-async function fetchPinnedSkill(entry: SkillsConfigEntry & { pin: SkillsPin }): Promise<{ tmpRoot: string; skillDir: string }> {
+async function fetchPinnedSkill(
+  entry: SkillsConfigEntry & { pin: SkillsPin },
+  quiet = false,
+): Promise<{ tmpRoot: string; skillDir: string }> {
   const tarballUrl = `https://codeload.github.com/${entry.repo}/tar.gz/${entry.pin.ref}`;
   const tmpRoot = await mkdtemp(join(tmpdir(), "ai-agents-arsenal-pin-"));
-  await $`curl -fsSL ${tarballUrl} | tar xz -C ${tmpRoot} --strip-components=1`;
+  const fetch = $`curl -fsSL ${tarballUrl} | tar xz -C ${tmpRoot} --strip-components=1`;
+  await (quiet ? fetch.quiet() : fetch);
   return { tmpRoot, skillDir: join(tmpRoot, entry.pin.path) };
 }
 
-/** Global-scope pinned install: materializes straight into the canonical store. */
-async function installPinnedSkill(entry: SkillsConfigEntry & { pin: SkillsPin }, skillsStore: string): Promise<void> {
+/**
+ * Global-scope pinned install: materializes straight into the canonical store.
+ * `quiet` keeps curl/tar output off the console (`--report` mode); a failure
+ * still throws a ShellError carrying that output.
+ */
+export async function installPinnedSkill(
+  entry: SkillsConfigEntry & { pin: SkillsPin },
+  skillsStore: string,
+  quiet = false,
+): Promise<void> {
   const skillName = entry.skills[0]!;
   const targetDir = join(skillsStore, skillName);
-  const { tmpRoot, skillDir } = await fetchPinnedSkill(entry);
+  const { tmpRoot, skillDir } = await fetchPinnedSkill(entry, quiet);
 
   try {
     await mkdir(skillsStore, { recursive: true });
@@ -335,7 +317,7 @@ async function installPinnedSkillToProject(
  * confirm against the filesystem instead: a skill exists only if its SKILL.md
  * does, since that's exactly what Claude Code itself requires to see it.
  */
-async function verifyInstalled(
+export async function verifyInstalled(
   names: string[],
   skillsStore: string,
 ): Promise<{ installed: string[]; missing: string[] }> {
@@ -351,7 +333,7 @@ async function verifyInstalled(
   return { installed, missing };
 }
 
-async function pathExists(path: string): Promise<boolean> {
+export async function pathExists(path: string): Promise<boolean> {
   try {
     await stat(path);
     return true;
@@ -370,36 +352,6 @@ async function listInstalledGlobalSkills(): Promise<Set<string>> {
     // Fall back to treating nothing as installed — everything goes through `add`.
     return new Set();
   }
-}
-
-function describeError(err: unknown): string {
-  let details = "";
-  if (err && typeof err === "object") {
-    const stderr = "stderr" in err && err.stderr ? String(err.stderr) : "";
-    const stdout = "stdout" in err && err.stdout ? String(err.stdout) : "";
-
-    const cleanStderr = extractErrorDetails(stderr);
-    const cleanStdout = extractErrorDetails(stdout);
-
-    if (cleanStdout && cleanStderr) {
-      if (cleanStdout.includes(cleanStderr) || cleanStderr.includes(cleanStdout)) {
-        details = cleanStdout.length > cleanStderr.length ? cleanStdout : cleanStderr;
-      } else {
-        details = `${cleanStdout}\n\nStderr:\n${cleanStderr}`;
-      }
-    } else if (cleanStdout) {
-      details = cleanStdout;
-    } else if (cleanStderr) {
-      details = cleanStderr;
-    }
-  }
-  if (!details && err instanceof Error) {
-    details = err.message;
-  }
-  if (!details) {
-    details = String(err);
-  }
-  return details;
 }
 
 function printSummary(summary: {
@@ -456,36 +408,6 @@ function printSummary(summary: {
   }
   console.log("└────────────────────────────────────────────────────────────\n");
 }
-export function stripAnsi(str: string): string {
-  return str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, "");
-}
-
-/**
- * Strips ANSI codes, splits output into lines, and skips the leading ASCII logo
- * to extract the actual error content.
- */
-export function extractErrorDetails(output: string): string {
-  const clean = stripAnsi(output);
-  const lines = clean.split("\n");
-
-  let startIndex = 0;
-  // Skip leading empty lines or logo lines
-  while (startIndex < lines.length) {
-    const line = lines[startIndex]!;
-    if (line.trim() === "" || /^[ █╔═╝║╚╗\r]*$/.test(line)) {
-      startIndex++;
-    } else {
-      break;
-    }
-  }
-
-  if (startIndex >= lines.length) {
-    return clean.trim();
-  }
-
-  // Join back the remaining lines and trim trailing whitespace
-  return lines.slice(startIndex).join("\n").trimEnd();
-}
 
 /**
  * For each agent that defines a `skillsPath`, create symlinks from that path
@@ -494,10 +416,11 @@ export function extractErrorDetails(output: string): string {
  * Existing symlinks pointing to the same target are left untouched.
  * Stale symlinks (broken or pointing elsewhere) are replaced.
  */
-async function createSkillSymlinks(
+export async function createSkillSymlinks(
   agents: AgentConfigEntry[],
   skillNames: string[],
   skillsStore: string,
+  log: LineLogger = console.log,
 ): Promise<void> {
   for (const agent of agents) {
     // skillsPath is guaranteed non-null here (filtered above)
@@ -507,7 +430,7 @@ async function createSkillSymlinks(
     for (const skillName of skillNames) {
       const linkPath = join(skillsDir, skillName);
       const targetPath = join(skillsStore, skillName);
-      await ensureSymlink(linkPath, targetPath, agent.id, skillName);
+      await ensureSymlink(linkPath, targetPath, agent.id, skillName, log);
     }
   }
 }
@@ -528,10 +451,11 @@ async function ensureSymlink(
   targetPath: string,
   agentId: string,
   skillName: string,
+  log: LineLogger,
 ): Promise<void> {
   try {
     await symlink(targetPath, linkPath);
-    console.log(`  ✓ [${agentId}] ${skillName} → ${targetPath}`);
+    log(`  ✓ [${agentId}] ${skillName} → ${targetPath}`);
   } catch (err: unknown) {
     if (!isNodeError(err, "EEXIST")) {
       throw err;
@@ -546,7 +470,7 @@ async function ensureSymlink(
     // Stale or wrong target — replace it.
     await unlink(linkPath);
     await symlink(targetPath, linkPath);
-    console.log(`  ↺ [${agentId}] ${skillName} (replaced stale symlink)`);
+    log(`  ↺ [${agentId}] ${skillName} (replaced stale symlink)`);
   }
 }
 
