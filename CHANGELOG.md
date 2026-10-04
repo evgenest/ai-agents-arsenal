@@ -4,6 +4,28 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v6.3.0 - Machine-readable skills report (`--report`)
+
+Release date: 2026-10-04
+
+Tag: `v6.3.0`
+
+Changes since `v6.2.3`:
+- `setup/run.ts`: new `--report <path>` (also `--report=<path>`) flag for the global skills phase. It requires `--skills` and is rejected with `--mcp`, `--project`, or `--dry-run`, or without a value. In this mode there is no setup preview and no per-skill console output: every `skills` CLI call runs captured, a JSON report is written to `<path>`, and stdout gets one summary line. The exit code is 1 when any skill failed or a run-level error was recorded. Without `--report`, the output is the same as before, apart from the CLI-refresh change below
+- `setup/skills-report.ts` (new): the report contract (`version: 1`, `cli {before, after, error}`, per-skill `status` of `updated` / `installed` / `failed` / `unchanged` / `pinned` with `oldHash`/`newHash`/`error`/`note`, run-level `errors[]`, and an ANSI-stripped `transcript`), plus `normalizeRepo()`, parsing of `skills add --json`, the report collector, and `runWithReport()`, which always writes the report (even when the run throws) and exits non-zero if it can't
+- `setup/skills-lock.ts` and `setup/skills-update-output.ts` (new): lockfile reading and diffing, and `skills update` output parsing. Besides the status lines, the parser captures whole warning blocks, which never set the CLI's exit code: "appear to have been deleted upstream" (plus "Skipping deletion in non-interactive mode."), "Multiple current paths match", and "N skill(s) cannot be checked automatically" with its `To update:` lines
+- `setup/skills-report-run.ts` (new): the captured global flow. "Updated" vs "unchanged" now comes from the lockfile diff instead of "was passed to `skills update`". A `✗ Failed to update <name>` / `✗ Cannot update <name>` line triggers one `skills add <repo> --skill <name> -g -a claude-code -y --json` per name. That retry recovers the real reason, which `skills update` throws away because its re-installs run with their output discarded, and if it succeeds the skill is reported as updated with a note. A `✗ Failed to check skills from <source>` line goes into `errors[]`, and the affected skills are only reported as fine once a re-add confirms them, since that line never sets the CLI's exit code. Every `skills update` warning block goes into `errors[]` in full, and the configured skills it names are reported as `failed` instead of `unchanged`. Present skills that `skills update` can't check (no lockfile entry, or no `skillFolderHash`/`skillPath`, which the CLI drops or skips silently) are reported as `failed` with the `skills add` command that fixes them, plus an `errors[]` entry, instead of looking `unchanged` forever. A skill that `skills list` reports but that is missing from the canonical store (e.g. its only copy is in `~/.agents/skills`) is re-added instead of being passed to `skills update`, which would never restore it. When `skills list` fails and every skill is re-added, a skill that was already on disk is classified by its lockfile hash rather than as `installed`. A failed add (non-zero exit, or a `--json` entry other than `installed`) is reported as `failed` with the full error, even if the old copy is still on disk (`setup/skills-add-result.ts`, `setup/skills-report-update.ts`, `setup/skills-report-exec.ts`)
+- `setup/skills-cli.ts` (new, moved out of `setup/skills.ts`): the global `skills` CLI install/update step now records the version before and after, and stops swallowing failures. Normal mode prints a warning with the full error, and `--report` records it in `cli.error`. "Up to date" is printed only when the version really didn't change, and a real bump prints `vA → vB`
+- `setup/skills-cli.ts`: tested-major guard. `TESTED_SKILLS_CLI_MAJOR` (1) records the `skills` CLI major this release was verified against. If the installed major is different (for example after a wrapper's `bun update -g --latest`), `--report` adds "skills CLI v<X> is untested with ai-agents-arsenal <version> (verified with 1.x) — check that skills still update correctly, then bump TESTED_SKILLS_CLI_MAJOR" to `errors[]` (exit 1). Normal mode prints the same text as a `⚠` warning and keeps going
+- `setup/errors.ts` (new): `stripAnsi`, `extractErrorDetails`, and `describeError`, shared by both modes. They are still re-exported from `setup/skills.ts`
+- `setup/skills.ts`: the planning (`planGlobalSkills`), canonical-store lookup (`resolveCanonicalStore`), verification, pinned install, and symlink helpers are exported for the report flow. Symlink logging and pinned-fetch output can be redirected, but the defaults are unchanged
+
+Net effect:
+- a wrapper such as `update-all` can show only the skills that actually changed or failed, with the full error text for each failure, instead of every configured skill listed as "Updated" on every run
+- a skill that `skills update` silently skipped (deleted upstream, ambiguous path, untracked, or missing its hash) can no longer show up as "unchanged" with exit 0
+- a `skills` major the package wasn't tested with is flagged instead of trusted
+- a failed `skills` CLI self-update can no longer pass silently, and the "up to date" message can no longer appear right after a refresh that didn't happen
+
 ## v6.2.3 - Drop the retired next-best-practices pin
 
 Release date: 2026-09-08
