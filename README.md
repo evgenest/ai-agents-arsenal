@@ -161,6 +161,7 @@ This repository-local pattern applies to skills. MCP configuration remains machi
 | `email-best-practices` | resend/email-best-practices |
 | `react-email` | resend/react-email |
 | `resend-design-skills` | resend/design-skills |
+| `humanizer` | blader/humanizer |
 | `note-taking` | seb1n/awesome-ai-agent-skills |
 | `vercel-agent` | vercel-labs/vercel-plugin |
 | `githits-mcp` | githits-com/githits-cli — the repo's top-level `skills/`, not the Claude Code plugin built from `plugins/claude/` (that one ships `githits:onboarding`/`githits:search` instead, so the two don't overlap) |

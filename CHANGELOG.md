@@ -4,6 +4,19 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v6.3.2 - humanizer added to the default skills manifest
+
+Release date: 2026-10-31
+
+Tag: `v6.3.2`
+
+Changes since `v6.3.1`:
+- `config/skills.config.ts`: new entry `blader/humanizer` with the `humanizer` skill (MIT, removes signs of AI-generated writing from text). It was previously a loose copy in `~/.claude/skills/` that no updater tracked
+- `README.md`: `humanizer` added to the skills table
+
+Net effect:
+- `humanizer` is installed and refreshed by arsenal like every other manifest skill; `update-all` no longer reports it as unmanaged
+
 ## v6.3.1 - Claude Code is the only enabled agent
 
 Release date: 2026-10-04
