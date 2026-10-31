@@ -129,6 +129,10 @@ export const skillsConfig = [
     skills: ["resend-design-skills"],
   },
   {
+    repo: "blader/humanizer",
+    skills: ["humanizer"],
+  },
+  {
     repo: "seb1n/awesome-ai-agent-skills",
     skills: ["note-taking"],
   },
