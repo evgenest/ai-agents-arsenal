@@ -4,6 +4,19 @@ This changelog documents the main historical release milestones of the project.
 
 The entries below were created retroactively from the git history and Claude Code session history to capture what changed from version to version, not just to restate release summaries.
 
+## v6.3.3 - orca computer-use skill renamed
+
+Release date: 2026-11-12
+
+Tag: `v6.3.3`
+
+Changes since `v6.3.2`:
+- `config/skills.config.ts`: the `stablyai/orca` skill `computer-use` is now `orca-computer-use`. Upstream removed the old name on 2026-11-03 (`7f885c1`); `skills update` then reports the installed copy as deleted and, non-interactively, leaves it in place
+- `README.md`: skills table row updated to `orca-computer-use`
+
+Net effect:
+- A fresh or updated install tracks the skill that still exists upstream. A machine that still has the old `computer-use` copy needs that name removed and `orca-computer-use` installed; arsenal does not delete a skill that left the manifest
+
 ## v6.3.2 - humanizer added to the default skills manifest
 
 Release date: 2026-10-31

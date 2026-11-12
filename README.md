@@ -153,7 +153,7 @@ This repository-local pattern applies to skills. MCP configuration remains machi
 | `ai-sdk`, `migrate-ai-sdk-v6-to-v7` | vercel/ai |
 | `better-auth-best-practices`, `create-auth`, `email-and-password-best-practices`, `organization-best-practices`, `two-factor-authentication-best-practices` | better-auth/skills |
 | `chat-sdk` | vercel/chat |
-| `computer-use` | stablyai/orca |
+| `orca-computer-use` | stablyai/orca |
 | `context7-mcp` | upstash/context7 |
 | `convex`, `convex-auth`, `convex-create-component`, `convex-migrate`, `convex-optimize`, `convex-quickstart` | get-convex/agent-skills |
 | `creative-director` | nexu-io/open-design |

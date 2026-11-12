@@ -85,8 +85,11 @@ export const skillsConfig = [
     skills: ["chat-sdk"],
   },
   {
+    // Upstream renamed this (stablyai/orca 7f885c1, 2026-11-03): computer-use ->
+    // orca-computer-use. The old name is gone from the repo, so `skills update`
+    // reports it as deleted and, non-interactively, leaves the stale copy in place.
     repo: "stablyai/orca",
-    skills: ["computer-use"],
+    skills: ["orca-computer-use"],
   },
   {
     repo: "upstash/context7",
